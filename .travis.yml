@@ -5,8 +5,9 @@ compiler:
 - gcc
 before_install:
 - sudo apt update -qq
-- sudo apt -y install -qq devscripts equivs lintian
+- sudo apt -y install -qq devscripts equivs lintian qt5-default
 - mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+- dpkg -l | grep qt
 script: debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
 after_success:
 - sudo dpkg -i ../gcoder*.deb
