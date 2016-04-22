@@ -6,7 +6,7 @@ compiler:
 before_install:
 - sudo apt update -qq
 - sudo apt -y install -qq devscripts equivs lintian
-- mk-build-deps -i -s sudo
+- mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 script: debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
 after_success:
 - sudo dpkg -i ../gcoder*.deb
