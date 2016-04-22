@@ -43,6 +43,10 @@ public slots:
 
     void toggleAutoZoom();
 
+    void helpDonate();
+    void helpIssues();
+    void helpChat();
+
 protected:
     void loadSettings();
     void saveSettings();

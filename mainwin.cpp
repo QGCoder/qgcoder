@@ -2,8 +2,8 @@
 #include "ui_mainwin.h"
 
 #include <QPushButton>
-
 #include <QProcess>
+#include <QDesktopServices>
 
 #include <QDebug>
 
@@ -44,6 +44,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
     
     //connect(ui->command, SIGNAL(keyPressed(QKeyEvent *)), view, SLOT(keyPressEvent(QKeyEvent *)));
+
+    connect(ui->action_Donate, SIGNAL(triggered(bool)), this, SLOT(helpDonate()));
+    connect(ui->action_Issues, SIGNAL(triggered(bool)), this, SLOT(helpIssues()));
+    connect(ui->action_Chat,   SIGNAL(triggered(bool)), this, SLOT(helpChat()));
 
     loadSettings();
 
@@ -179,4 +183,16 @@ void MainWindow::closeEvent(QCloseEvent * event) {
   event->accept();
 
   QMainWindow::closeEvent(event);
+}
+
+void MainWindow::helpDonate() {
+    QDesktopServices::openUrl(QUrl("https://koppi.github.com/paypal"));
+}
+
+void MainWindow::helpIssues() {
+    QDesktopServices::openUrl(QUrl("https://github.com/koppi/gcoder/issues"));
+}
+
+void MainWindow::helpChat() {
+    QDesktopServices::openUrl(QUrl("https://gitter.im/koppi/gcoder"));
 }

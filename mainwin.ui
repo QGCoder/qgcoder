@@ -64,9 +64,10 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="action_About"/>
     <addaction name="action_Donate"/>
     <addaction name="separator"/>
+    <addaction name="action_Issues"/>
+    <addaction name="action_Chat"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_View"/>
@@ -271,6 +272,21 @@ G1 X0Y2
    </property>
    <property name="toolTip">
     <string>Auto Zoom</string>
+   </property>
+  </action>
+  <action name="action_Issues">
+   <property name="text">
+    <string>&amp;Issues</string>
+   </property>
+  </action>
+  <action name="action_Wiki">
+   <property name="text">
+    <string>&amp;Wiki</string>
+   </property>
+  </action>
+  <action name="action_Chat">
+   <property name="text">
+    <string>&amp;Chat</string>
    </property>
   </action>
  </widget>
