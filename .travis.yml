@@ -3,6 +3,7 @@ dist: trusty
 language: cpp
 compiler:
 - gcc
+cache: apt
 before_install:
 - sudo apt update -qq
 - sudo apt -y install -qq devscripts equivs lintian qt5-default
