@@ -16,9 +16,3 @@ after_success:
 - sudo dpkg -i ../gcoder*.deb
 - sudo apt -y -f install
 - lintian -i ../gcoder*.dsc
-notifications:
-  email: false
-  irc:
-    channels:
-    - irc.freenode.org#gcoder
-    use_notice: true
