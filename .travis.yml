@@ -1,0 +1,12 @@
+language: cpp
+compiler:
+- gcc
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -qq devscripts equivs lintian
+- mk-build-deps -i -s sudo
+script: debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
+after_success:
+- sudo dpkg -i ../gcoder*.deb
+- sudo apt-get -f install
+- lintian -i ../gcoder*.dsc

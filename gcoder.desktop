@@ -1,0 +1,13 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Name=GCoder
+GenericName=GCoder
+Comment=G-Code editor with 3D preview
+Icon=/usr/share/icons/hicolor/scalable/apps/gcoder.svg
+
+Type=Application
+Categories=Engineering;
+
+Exec=gcoder %f
+Terminal=false
