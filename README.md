@@ -12,8 +12,6 @@ make
 ./gcoder
 ```
 
-To be written, see the .travis.yml for now.
-
 #Overview
 
 To be written, see proof of concept [Video](https://www.youtube.com/watch?v=9D3hMXP5-QM) for now.
