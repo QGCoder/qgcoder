@@ -5,6 +5,13 @@
 
 #Installation
 
+To be written, see the .travis.yml. For now, run:
+```bash
+qmake
+make
+./gcoder
+```
+
 To be written, see the .travis.yml for now.
 
 #Overview
