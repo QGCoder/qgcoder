@@ -18,8 +18,6 @@ INCLUDEPATH += /usr/local/include
 INCLUDEPATH += g2m
 
 HEADERS     = \
-    editor.h \
-    high.h \
     mainwin.h \
     view.h \
     g2m/canonLine.hpp    g2m/canonMotionless.hpp  g2m/gplayer.hpp        g2m/linearMotion.hpp   g2m/nanotimer.hpp \
@@ -28,8 +26,6 @@ HEADERS     = \
 
 SOURCES     = \
     main.cpp \
-    editor.cpp \
-    high.cpp \
     mainwin.cpp \
     view.cpp \
     g2m/canonLine.cpp    g2m/canonMotionless.cpp  g2m/helicalMotion.cpp  g2m/machineStatus.cpp \
@@ -52,12 +48,12 @@ link_pkgconfig {
 
   contains(LSB_RELEASE_ID, Ubuntu): {
     contains(LSB_RELEASE_REL, 16.04) : {
-      LIBS += -lQGLViewer -lGLEW -lGLU -lGL -lglut
+      LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
     } else {
-      LIBS += -lQGLViewer -lGLEW -lGLU -lGL -lglut
+      LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
     }
   } else {
-    LIBS += -lQGLViewer -lGLEW -lGLU -lGL -lglut
+    LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
   }
 }
 

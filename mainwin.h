@@ -3,10 +3,9 @@
 
 #include <QMainWindow>
 
-#include <QPlainTextEdit>
 #include <QSettings>
 
-#include "editor.h"
+#include "QGCodeEditor.h"
 #include "view.h"
 #include "g2m.hpp"
 

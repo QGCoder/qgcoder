@@ -44,7 +44,7 @@
      <x>0</x>
      <y>0</y>
      <width>572</width>
-     <height>25</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -102,18 +102,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="CodeEditor" name="gcode">
-       <property name="plainText">
-        <string>G20
-
-F1000
-
-G0 X0Y0
-G1 X10Y10
-G1 X0Y2
-;</string>
-       </property>
-      </widget>
+      <widget class="QGCodeEditor" name="gcode"/>
      </item>
     </layout>
    </widget>
@@ -292,9 +281,9 @@ G1 X0Y2
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CodeEditor</class>
+   <class>QGCodeEditor</class>
    <extends>QPlainTextEdit</extends>
-   <header>editor.h</header>
+   <header>QGCodeEditor.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
