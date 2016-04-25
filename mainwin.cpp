@@ -85,8 +85,8 @@ void MainWindow::changedGcode() {
     
         view->clear();
     
-        emit setRS274("/usr/bin/rs274");
-        emit setToolTable("/opt/machinekit/configs/sim/sim_mm_test.tbl");
+        emit setRS274("/usr/src/machinekit-main/bin/rs274");
+        emit setToolTable("/usr/src/machinekit-main/configs/sim/axis/sim_mm.tbl");
         emit setGcodeFile("/tmp/gcode.ngc");
         
         emit interpret();
