@@ -56,9 +56,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    delete ui;
-    delete settings;
-    delete g2m;
+//    delete ui;
+//    delete settings;
+//    delete g2m;
 }
 
 void MainWindow::toggleAutoZoom() {
