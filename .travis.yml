@@ -10,7 +10,14 @@ before_install:
 - sudo apt update -qq
 - sudo apt -y install -qq devscripts equivs lintian qt5-default
 - mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+- git clone --depth 1 https://github.com/koppi/QGCodeEditor
+- cd QGCodeEditor
+- mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 - dpkg -l | grep qt
+- debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
+- sudo dpkg -i ../libqgcodeeditor*deb
+- sudo apt -y -f install
+- cd ..
 script: debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
 after_success:
 - sudo dpkg -i ../gcoder*.deb
