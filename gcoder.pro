@@ -12,8 +12,7 @@ MOC_DIR = .moc
 UI_DIR = .ui
 RCC_DIR = .rcc
 
-INCLUDEPATH += /usr/include
-INCLUDEPATH += /usr/local/include
+CONFIG += qgcodeeditor
 
 INCLUDEPATH += g2m
 
@@ -21,7 +20,8 @@ HEADERS     = \
     mainwin.h \
     view.h \
     g2m/canonLine.hpp    g2m/canonMotionless.hpp  g2m/gplayer.hpp        g2m/linearMotion.hpp   g2m/nanotimer.hpp \
-    g2m/canonMotion.hpp  g2m/g2m.hpp              g2m/helicalMotion.hpp  g2m/machineStatus.hpp  g2m/point.hpp
+    g2m/canonMotion.hpp  g2m/g2m.hpp              g2m/helicalMotion.hpp  g2m/machineStatus.hpp  g2m/point.hpp \
+    lex_analyzer.hpp
     
 
 SOURCES     = \
@@ -29,7 +29,8 @@ SOURCES     = \
     mainwin.cpp \
     view.cpp \
     g2m/canonLine.cpp    g2m/canonMotionless.cpp  g2m/helicalMotion.cpp  g2m/machineStatus.cpp \
-    g2m/canonMotion.cpp  g2m/g2m.cpp              g2m/linearMotion.cpp   g2m/nanotimer.cpp
+    g2m/canonMotion.cpp  g2m/g2m.cpp              g2m/linearMotion.cpp   g2m/nanotimer.cpp \
+    lex_analyzer.cpp
 
 target.path = /usr/bin
 
