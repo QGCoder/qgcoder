@@ -51,6 +51,11 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="action_Open"/>
+    <addaction name="action_Save_As"/>
+    <addaction name="separator"/>
+    <addaction name="action_Settings"/>
+    <addaction name="separator"/>
     <addaction name="action_Quit"/>
    </widget>
    <widget class="QMenu" name="menu_View">
@@ -172,7 +177,6 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="action_Quit"/>
    <addaction name="separator"/>
    <addaction name="action_showFullScreen"/>
    <addaction name="action_showNormal"/>
@@ -278,6 +282,33 @@
     <string>&amp;Chat</string>
    </property>
   </action>
+  <action name="action_Open">
+   <property name="text">
+    <string>File Open</string>
+   </property>
+   <property name="toolTip">
+    <string>Open File</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_Settings">
+   <property name="text">
+    <string>Set local paths</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="action_Save_As">
+   <property name="text">
+    <string>File Save As</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+A</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -336,5 +367,58 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Open</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onOpenFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>285</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_Settings</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onSettings()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>285</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_Save_As</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onSaveAs()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>285</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>onOpenFile()</slot>
+  <slot>onSettings()</slot>
+  <slot>onSaveAs()</slot>
+ </slots>
 </ui>

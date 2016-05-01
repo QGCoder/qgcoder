@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Settings</class>
+ <widget class="QDialog" name="Settings">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>472</width>
+    <height>262</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>GCoder path settings</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <item row="0" column="0" colspan="3">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Path to rs274 interpreter:-</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="le_path1">
+        <property name="toolTip">
+         <string>rs274 will be in the /bin dir
+of your machinekit installation</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pb_browse1">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Path to tool table</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="le_path2">
+        <property name="toolTip">
+         <string>A xxx.tbl file will be in your
+machinekit machine config dir</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pb_browse2">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="3">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Temporary GCode file to use</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="le_path3">
+        <property name="toolTip">
+         <string>Only change this if you wish to start with a specific file
+Beware it could be overwritten.</string>
+        </property>
+        <property name="text">
+         <string>/tmp/gcode.ngc</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pb_browse3">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>269</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Cancel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButton_2">
+     <property name="text">
+      <string>OK</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pb_browse1</sender>
+   <signal>clicked()</signal>
+   <receiver>Settings</receiver>
+   <slot>onFileBrowse1()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>362</x>
+     <y>50</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>389</x>
+     <y>80</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pb_browse2</sender>
+   <signal>clicked()</signal>
+   <receiver>Settings</receiver>
+   <slot>onFileBrowse2()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>357</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>382</x>
+     <y>167</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pb_browse3</sender>
+   <signal>clicked()</signal>
+   <receiver>Settings</receiver>
+   <slot>onFileBrowse3()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>352</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>389</x>
+     <y>237</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>Settings</receiver>
+   <slot>onAccept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>345</x>
+     <y>263</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>327</x>
+     <y>280</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Settings</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>217</x>
+     <y>265</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>137</x>
+     <y>267</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>onFileBrowse1()</slot>
+  <slot>onFileBrowse2()</slot>
+  <slot>onFileBrowse3()</slot>
+  <slot>onAccept()</slot>
+ </slots>
+</ui>
