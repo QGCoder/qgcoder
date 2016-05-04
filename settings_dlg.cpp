@@ -35,7 +35,7 @@ QDir dir;
     else if(buttonNumber == 2)
         {
         if(tooltable.isEmpty())
-            pathStr = home_dir + "/machinekit/configs";
+            pathStr = home_dir + "machinekit/configs";
         else
             pathStr = dir.absoluteFilePath(tooltable);
         }

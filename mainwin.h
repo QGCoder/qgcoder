@@ -14,13 +14,6 @@ namespace Ui {
 class MainWindow;
 }
 
-// max file size of 25KB
-#define MAX_SIZE 25000
-// render initial 3K chunk
-#define CHUNK_SIZE 3000
-// add in 1K bits dynamically
-#define ADD_SIZE 1000
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -41,40 +34,38 @@ signals:
 public slots:
     // load the last command string from the settings
     // used during startup
-    void loadSettingsCommand();
+    virtual void loadSettingsCommand();
 
-    void changedGcode();
-    void changedCommand();
+    virtual void changedGcode();
+    virtual void changedCommand();
 
-    void onOpenFile();
-    void onSaveAs();
-    int onSettings();
-    void onChangedPosition();
+    virtual void onOpenFile();
+    virtual void onSaveAs();
+    virtual int onSettings();
 
-    void appendCanonLine(g2m::canonLine*);
+    virtual void appendCanonLine(g2m::canonLine*);
 
-    void toggleAutoZoom();
-
-    void helpDonate();
-    void helpIssues();
-    void helpChat();
+    virtual void toggleAutoZoom();
+    virtual void showFullScreen();
+    
+    virtual void helpDonate();
+    virtual void helpIssues();
+    virtual void helpChat();
 
 protected:
     void loadSettings();
     void saveSettings();
 
-private:
+private:  // functions
     int openInViewer(QString filename);
     void openInBrowser(QString filename);
-    int reOpenInBrowser();
     int saveInBrowser(QString& filename);
 
     void closeEvent(QCloseEvent *) Q_DECL_OVERRIDE;
 
-private:
+private: // data
     QString home_dir, openFile;
-    int fileSize, filePos;
-    bool bMoreBig, bBigFile, bFileMode, bFirstCallDone;
+    bool bFileMode;
 
     QString rs274;
     QString tooltable;

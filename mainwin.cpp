@@ -6,11 +6,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QDebug>
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <pwd.h>
-
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -44,22 +40,17 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( g2m, SIGNAL( signalError(QString) ),        ui->stderror, SLOT( setPlainText(QString) ) );
 
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-	connect(ui->gcode, SIGNAL(cursorPositionChanged()), this, SLOT(onChangedPosition()));
     connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
 
     connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
-    
+
     //connect(ui->command, SIGNAL(keyPressed(QKeyEvent *)), view, SLOT(keyPressEvent(QKeyEvent *)));
 
     connect(ui->action_Donate, SIGNAL(triggered(bool)), this, SLOT(helpDonate()));
     connect(ui->action_Issues, SIGNAL(triggered(bool)), this, SLOT(helpIssues()));
     connect(ui->action_Chat,   SIGNAL(triggered(bool)), this, SLOT(helpChat()));
 
-    // qt does not understand ~/ so path must be absolute or it will create ~/ on PWD
-    struct passwd *pw = getpwuid(getuid());
-    const char *homedir = pw->pw_dir;
-
-    home_dir = homedir;
+    home_dir = QStandardPaths::locate(QStandardPaths::HomeLocation, QString(), QStandardPaths::LocateDirectory);
     openFile = "";
 
     loadSettings();
@@ -76,15 +67,21 @@ void MainWindow::toggleAutoZoom() {
     view->setAutoZoom(ui->action_AutoZoom->isChecked());
 }
 
+void MainWindow::showFullScreen()
+{
+    if( ui->action_showFullScreen->isChecked() )
+        showMaximized();
+    else
+        showNormal();
+}
+
 void MainWindow::changedCommand() 
 {
 QString str;
 
     openFile = "";
-    bBigFile = bMoreBig = bFileMode = bFirstCallDone = false;
-    fileSize = filePos = 0;
+    bFileMode = false;
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-    disconnect(ui->gcode, SIGNAL(cursorPositionChanged()), this, SLOT(onChangedPosition()));
     str = "GCoder :- ";
     setWindowTitle(str);
     parseCommand();
@@ -92,8 +89,8 @@ QString str;
 
 void MainWindow::changedGcode() {
 
-if(bFileMode)
-    return;
+    if(bFileMode)
+        return;
 
     if (ui->gcode->toPlainText().isEmpty()) 
         {
@@ -172,7 +169,8 @@ void MainWindow::loadSettings()
 
     if (settings->value("maximized", isMaximized() ).toBool()) 
         showMaximized();
-
+    ui->action_showFullScreen->setChecked(settings->value("maximized", isMaximized() ).toBool());
+    
     view->setAutoZoom(settings->value("autoZoom", view->autoZoom()).toBool());
     ui->action_AutoZoom->setChecked(settings->value("autoZoom", view->autoZoom()).toBool());
 
@@ -224,7 +222,7 @@ void MainWindow::saveSettings() {
 
 void MainWindow::closeEvent(QCloseEvent * event) 
 {
-  qDebug() << "MainWindow::closeEvent";
+//  qDebug() << "MainWindow::closeEvent";
   saveSettings();
 //      ui.viewer->close();
 
@@ -239,7 +237,7 @@ void MainWindow::closeEvent(QCloseEvent * event)
 void MainWindow::onOpenFile()
 {
 QString filename;
-QString path = home_dir + "/machinekit";
+QString path = home_dir + "machinekit";
 
     filename = QFileDialog::getOpenFileName(this, tr("Open GCode"), path, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
     if(filename.length())
@@ -286,35 +284,21 @@ QString str;
 
     if (file.open(QFile::ReadOnly | QFile::Text))
         {
-        fileSize = file.size();
         str = "Loading file " + filename;
         ui->statusbar->showMessage(str, 5000);
-        ui->gcode->clear();        
+        ui->gcode->clear();
 
         QTextStream ts(&file);
 
-        while( (!ts.atEnd()) && (ts.pos() < CHUNK_SIZE) )
+        while( !ts.atEnd())
             {
             str = ts.readLine();
-            if(str.length())         
+            if(str.length()) // don't want blank lines
                 {
                 str = str + "\n";
                 ui->gcode->appendNewPlainText(str);
                 }
             }
-
-        filePos = ts.pos();
-        if(file.size() > MAX_SIZE)
-        bBigFile = true;
-
-        if(fileSize >= filePos)
-            bMoreBig = true;
-        else
-            {
-            bBigFile = bMoreBig = false;
-            fileSize = filePos = 0;
-            }
-
         file.close();  
 
         str = "GCoder :- " +  filename;
@@ -324,8 +308,6 @@ QString str;
 
         openFile = filename;
         bFileMode = true;
-        if(bMoreBig)
-            connect(ui->gcode, SIGNAL(cursorPositionChanged()), this, SLOT(onChangedPosition()));
         }
     else
         {
@@ -334,70 +316,6 @@ QString str;
         }
 }
 
-void MainWindow::onChangedPosition()
-{
-    if(!bBigFile || !bMoreBig)
-        return;
-
-    if( (ui->gcode->textCursor().blockNumber() + 1) > ((ui->gcode->document()->blockCount()) - 100)  
-         && bFirstCallDone)
-        reOpenInBrowser();
-    else
-        bFirstCallDone = true;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// called when further chunks of a large file are added to the text edit widget
-
-int MainWindow::reOpenInBrowser()
-{
-QString str, str2;
-QFile file(openFile);
-
-    if (file.open(QFile::ReadOnly | QFile::Text))
-        {
-        if(file.size() != fileSize)
-            {
-            str = "Error - file size has changed since last load - " + openFile ;
-            ui->statusbar->showMessage(str, 5000);
-            return -1;
-            }
-        QTextStream ts(&file);
-        ts.seek(filePos);
-
-        while( (!ts.atEnd()) && (ts.pos() < (filePos + ADD_SIZE) ) )
-            {
-            str = ts.readLine();
-            if(str.length())
-                {
-                str = str + "\n";
-                ui->gcode->appendNewPlainText(str);
-                }
-            }
-
-        filePos = ts.pos();
-        if(fileSize > filePos)
-            bMoreBig = true;
-        else
-            {
-            bBigFile = bMoreBig = false;
-            fileSize = filePos = 0;
-            disconnect(ui->gcode, SIGNAL(cursorPositionChanged()), this, SLOT(onChangedPosition()));
-            }
-        file.close();  
-        return 0;
-        }
-    else
-        {
-        str = "Error reOpening file " + openFile;
-        ui->statusbar->showMessage(str, 10000);
-        return -1;
-        }
-}
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -405,7 +323,6 @@ void MainWindow::onSaveAs()
 {
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save G Code (As)"), openFile, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
     saveInBrowser(fileName);
-    // bModified = false;	
 }
 
 
@@ -421,7 +338,6 @@ QString str;
         out << ui->gcode->toPlainText();
         file.close();
 
-        //ui->gcode->setReadOnly(true);
         str = "GCoder:- " +  filename;
         setWindowTitle(str);
         return 0;
