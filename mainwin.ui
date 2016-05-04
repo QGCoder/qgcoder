@@ -62,7 +62,6 @@
     <property name="title">
      <string>&amp;View</string>
     </property>
-    <addaction name="action_showNormal"/>
     <addaction name="action_showFullScreen"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
@@ -179,7 +178,6 @@
    </attribute>
    <addaction name="separator"/>
    <addaction name="action_showFullScreen"/>
-   <addaction name="action_showNormal"/>
    <addaction name="separator"/>
    <addaction name="action_AutoZoom"/>
   </widget>
@@ -228,6 +226,9 @@
    </property>
   </action>
   <action name="action_showFullScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;Fullscreen</string>
    </property>
@@ -340,22 +341,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>showFullScreen()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>action_showNormal</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>showNormal()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
