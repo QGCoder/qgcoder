@@ -1,5 +1,5 @@
-[gcoder - A gcode editing tool
-==============================
+gcoder - A gcode editing GUI
+============================
 
 # Installation
 
