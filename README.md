@@ -15,7 +15,7 @@ make
 ./gcoder
 ```
 
-Tested to run on Ubuntu 20.04. ![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
+Tested to run on Ubuntu 20.04. [![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
 
 ## Overview
 
