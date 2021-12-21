@@ -21,12 +21,12 @@ Tested to run on Ubuntu 20.04. ![CI](https://github.com/QGCoder/gcoder/actions/w
 
 To be written, see proof of concept [Video](https://www.youtube.com/watch?v=9D3hMXP5-QM).
 
-To get a quick random test G-Code file opened in GCoder type into the Bash text field:
+To get a quick random test G-code file opened in GCoder type into the Bash text field:
 ```bash
 tests/ngc-urandom.sh
 ```
 
-## License
+## Authors
 
-See [LICENSE](https://github.com/QGCoder/gcoder/blob/master/LICENSE).
+* [@koppi](https://github.com/koppi)
 
