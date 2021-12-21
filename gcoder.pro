@@ -48,8 +48,8 @@ link_pkgconfig {
 #  message(This is $$LSB_RELEASE_ID $$LSB_RELEASE_REL)
 
   contains(LSB_RELEASE_ID, Ubuntu): {
-    contains(LSB_RELEASE_REL, 16.04) : {
-      LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
+    contains(LSB_RELEASE_REL, 21.10) : {
+      LIBS += -lQGLViewer-qt5 -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
     } else {
       LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
     }
