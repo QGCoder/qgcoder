@@ -1,6 +1,6 @@
-A G-code editing Qt5 GUI [![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
-
 <img src="https://raw.githubusercontent.com/QGCoder/gcoder/master/doc/gcoder-001.png"/>
+
+An interactive G-code editing GUI.
 
 ## Installation
 
@@ -15,7 +15,7 @@ make
 ./gcoder
 ```
 
--- Tested on Ubuntu 20.04.
+Tested on Ubuntu 20.04. -- ![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
 
 ## Overview
 
