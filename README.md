@@ -3,8 +3,11 @@ gcoder - A G-code editing Qt5 GUI
 
 ## Installation
 
+First install the [libgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt5 designer widget plugin for editing G-code.
+
 ```bash
 gh repo clone QGCoder/gcoder
+cd gcoder
 qmake
 make
 ./gcoder
