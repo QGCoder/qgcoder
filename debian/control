@@ -3,7 +3,7 @@ Section: graphics
 Priority: optional
 Maintainer: Jakob Flierl <jakob.flierl@gmail.com>
 Uploaders: Jakob Flierl <jakob.flierl@gmail.com>
-Build-Depends: debhelper (>= 7.0.50~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev, freeglut3-dev, libglew1.6-dev
+Build-Depends: debhelper (>= 7.0.50~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew1.6-dev
 Standards-Version: 3.9.1
 Homepage: https://github.com/koppi/gcoder
 Vcs-Git: git://github.com/koppi/gcoder
