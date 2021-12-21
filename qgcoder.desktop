@@ -1,9 +1,9 @@
 [Desktop Entry]
 Encoding=UTF-8
 Version=1.0
-Name=GCoder
-GenericName=GCoder
-Comment=G-Code editor with 3D preview
+Name=qgcoder
+GenericName=qgcoder
+Comment=G-code editor with 3D preview
 Icon=/usr/share/icons/hicolor/scalable/apps/gcoder.svg
 
 Type=Application

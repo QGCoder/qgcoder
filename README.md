@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/QGCoder/gcoder/master/doc/gcoder-001.png"/>
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/gcoder-001.png"/>
 
 An interactive G-code editing GUI.
 
@@ -8,14 +8,14 @@ An interactive G-code editing GUI.
 
 * Next: clone, build and run gcoder as follows:
 ```bash
-gh repo clone QGCoder/gcoder
-cd gcoder
+gh repo clone QGCoder/qgcoder
+cd qgcoder
 qmake
 make
-./gcoder
+./qgcoder
 ```
 
-Tested to run on Ubuntu 20.04. [![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
+Tested to run on Ubuntu 20.04. [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
 
 ## Overview
 

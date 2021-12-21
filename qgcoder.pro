@@ -1,4 +1,4 @@
-TARGET   = gcoder
+TARGET   = qgcoder
 
 TEMPLATE = app
 
