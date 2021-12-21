@@ -376,11 +376,11 @@ int MainWindow::onSettings()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MainWindow::helpDonate() {
-    QDesktopServices::openUrl(QUrl("https://koppi.github.com/paypal"));
+    QDesktopServices::openUrl(QUrl("https://koppi.github.io/"));
 }
 
 void MainWindow::helpIssues() {
-    QDesktopServices::openUrl(QUrl("https://github.com/koppi/gcoder/issues"));
+    QDesktopServices::openUrl(QUrl("https://github.com/QGCoder/gcoder/issues"));
 }
 
 void MainWindow::helpChat() {
