@@ -82,7 +82,7 @@ QString str;
     openFile = "";
     bFileMode = false;
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-    str = "GCoder :- ";
+    str = "qgcoder :- ";
     setWindowTitle(str);
     parseCommand();
 }
