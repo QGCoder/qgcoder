@@ -1,4 +1,4 @@
-gcoder - A G-code editing Qt5 GUI
+gcoder - A G-code editing Qt5 GUI [![CI](https://github.com/QGCoder/gcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/gcoder/actions/workflows/main.yml)
 =================================
 
 ## Installation
