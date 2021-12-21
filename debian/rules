@@ -42,13 +42,13 @@ install: build
 	$(MAKE) INSTALL_ROOT=$(CURDIR)/debian/qgcoder install
 
 #	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/share/applications
-#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/applications/gcoder.desktop
+#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/applications/qgcoder.desktop
 
 #	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/share/icons/hicolor/scalable/apps
-#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/icons/hicolor/scalable/apps/gcoder.svg
+#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/icons/hicolor/scalable/apps/qgcoder.svg
 
 	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/bin
-	install -m 755 -p gcoder $(CURDIR)/debian/qgcoder/usr/bin/qgcoder
+	install -m 755 -p qgcoder $(CURDIR)/debian/qgcoder/usr/bin/qgcoder
 
 # Build architecture-independent files here.
 binary-indep: build install
