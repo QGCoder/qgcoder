@@ -40,10 +40,10 @@ jobs:
           sudo apt -y -f install
           sudo make install # fixme
           cd ..
-      - name: Build and install QGCoder/gcoder
+      - name: Build and install QGCoder/qgcoder
         run: |
           debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
-          sudo dpkg -i ../gcoder*.deb
+          sudo dpkg -i ../qgcoder*.deb
           sudo apt -y -f install
           ls -alrt
 
