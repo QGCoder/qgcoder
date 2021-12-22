@@ -72,3 +72,9 @@ DIRS_DC = object_script.* .ui .moc .rcc .obj *.pro.user $$TARGET
 unix:QMAKE_DISTCLEAN  += -r $$DIRS_DC
 win32:QMAKE_DISTCLEAN += /s /f /q $$DIRS_DC && rd /s /q $$DIRS_DC
 
+DISTFILES += \
+    icons/qgcoder.png
+
+RESOURCES += \
+    res.qrc
+
