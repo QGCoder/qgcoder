@@ -33,3 +33,6 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 ## Contributors
 
 * **ArcEye** - [ArcEye](https://github.com/ArcEye)
+* **Mark Pictor**
+* **Kazuyasu Hamada**
+* **Anders Wallin** - [aewallin](https://github.com/aewallin)
