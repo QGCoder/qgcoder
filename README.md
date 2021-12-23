@@ -26,7 +26,7 @@ When started first, you have to provide qgcoder three filenames, as seen in the 
 
 A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside qgcoder.
 
-## Authors
+## Author
 
 * **Jakob Flierl** - [koppi](https://github.com/koppi)
 
