@@ -29,9 +29,9 @@ target
 qgcoder
 
 build-stamp
-debian/gcoder.debhelper.log
-debian/gcoder.substvars
-debian/gcoder/
+debian/qgcoder.debhelper.log
+debian/qgcoder.substvars
+debian/qgcoder/
 debian/files
 
 .qmake.stash
@@ -41,4 +41,3 @@ gcoder-build-deps_0.0.0-ubuntu1_amd64.changes
 x
 
 qgcoder.pro.user
-
