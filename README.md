@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/gcoder-001.png"/>
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-001.png"/>
 
 An interactive G-code editing GUI.
 
@@ -19,14 +19,14 @@ Tested to run on Ubuntu 20.04. - [![CI](https://github.com/QGCoder/qgcoder/actio
 
 ## Overview
 
-To be written, see proof of concept [Video](https://www.youtube.com/watch?v=9D3hMXP5-QM).
+When started first, you have to provide qgcoder three filenames, as seen in the following screenshot:
 
-To get a quick random test G-code file opened in qgcoder type into the Bash text field:
-```bash
-tests/ngc-urandom.sh
-```
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-002.png"/>
+
+
+A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside qgcoder.
 
 ## Authors
 
-* [@koppi](https://github.com/koppi)
+* **Jakob Flierl** - [koppi](https://github.com/koppi)
 
