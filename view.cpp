@@ -10,6 +10,7 @@
 
 #include <QKeyEvent>
 #include <QDebug>
+#include <QWidget>
 
 #include "canonMotion.hpp"
 

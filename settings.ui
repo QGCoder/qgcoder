@@ -6,18 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>472</width>
-    <height>262</height>
+    <width>607</width>
+    <height>282</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>GCoder path settings</string>
+   <string>Settings</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>Path to rs274 interpreter:-</string>
+      <string>rs274ngc interpreter:</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
@@ -41,7 +41,7 @@ of your machinekit installation</string>
    <item row="1" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
-      <string>Path to tool table</string>
+      <string>Tool table (*.tbl) file:</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
@@ -65,7 +65,7 @@ machinekit machine config dir</string>
    <item row="2" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
-      <string>Temporary GCode file to use</string>
+      <string>Temporary G-code file:</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
