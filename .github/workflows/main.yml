@@ -26,22 +26,28 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install packages required for the build
-        run: sudo apt -y install -qq devscripts equivs lintian qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools
+        run: |
+          sudo apt update
+          sudo apt full-upgrade -y
+          sudo DEBIAN_FRONTEND=noninteractive apt install -qq devscripts equivs lintian
+          mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 
       - name: Build and install QGCoder/libqgcodeeditor
         run: |
-          mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
           git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
           cd libqgcodeeditor
           mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
-          dpkg -l | grep qt
-          debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
+          dpkg-buildpackage -b -rfakeroot -us -uc
           sudo dpkg -i ../libqgcodeeditor*deb
+          cd ..
           sudo apt -y -f install
+
       - name: Build and install QGCoder/qgcoder
         run: |
-          debuild --preserve-env --preserve-envvar PATH -i -us -uc -b
+          dpkg-buildpackage -b -rfakeroot -us -uc
           sudo dpkg -i ../qgcoder*.deb
           sudo apt -y -f install
           ls -alrt
 
+      - name: Run lintian
+        run: lintian ../libqgcodeeditor*deb | lintian-info
