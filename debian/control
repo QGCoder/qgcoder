@@ -3,11 +3,11 @@ Section: graphics
 Priority: optional
 Maintainer: Jakob Flierl <jakob.flierl@gmail.com>
 Uploaders: Jakob Flierl <jakob.flierl@gmail.com>
-Build-Depends: debhelper (>= 7.0.50~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew1.6-dev
+Build-Depends: debhelper (>= 7.0.50~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew-dev
 Standards-Version: 3.9.1
-Homepage: https://github.com/QGCoder/gcoder
-Vcs-Git: git://github.com/QGCoder/gcoder
-Vcs-Browser: https://github.com/QGCoder/gcoder
+Homepage: https://github.com/QGCoder
+Vcs-Git: git://github.com/QGCoder/qgcoder
+Vcs-Browser: https://github.com/QGCoder/qgcoder
 
 Package: qgcoder
 Architecture: any
