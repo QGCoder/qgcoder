@@ -15,7 +15,6 @@ jobs:
           - impish
           - jammy
     runs-on: ubuntu-22.04
-
     steps:
       - name: checkout code
         uses: actions/checkout@v3
