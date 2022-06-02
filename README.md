@@ -6,12 +6,10 @@ An interactive G-code editing GUI.
 
 * First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt5 designer widget plugin for editing G-code.
 
-* Next: clone, build and run qgcoder as follows:
+* Next: clone, build and run ```qgcoder``` as follows:
 ```bash
-gh repo clone QGCoder/qgcoder
-cd qgcoder
-qmake
-make
+gh repo clone QGCoder/qgcoder && qgcoder
+qmake && make -j$(nproc)
 ./qgcoder
 ```
 
@@ -19,12 +17,12 @@ make
 
 ## Overview
 
-When started first, you have to provide qgcoder three filenames, as seen in the following screenshot:
+When started first, you have to provide ```qgcoder``` three filenames, as seen in the following screenshot:
 
 <img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-002.png"/>
 
 
-A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside qgcoder.
+A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside ```qgcoder```.
 
 ## Author
 
