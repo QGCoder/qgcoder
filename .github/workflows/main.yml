@@ -41,6 +41,7 @@ jobs:
           sudo dpkg -i ../libqgcodeeditor*deb
           cd ..
           sudo apt -y -f install
+          sudo ldconfig
 
       - name: Build and install QGCoder/qgcoder
         run: |
