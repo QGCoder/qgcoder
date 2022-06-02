@@ -5,7 +5,8 @@
 
 #include <QSettings>
 
-#include "QGCodeEditor.h"
+#include <QGCodeEditor/QGCodeEditor.h>
+
 #include "view.h"
 #include "g2m.hpp"
 #include "settings_dlg.h"

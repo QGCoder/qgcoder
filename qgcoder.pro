@@ -13,6 +13,7 @@ UI_DIR = .ui
 RCC_DIR = .rcc
 
 CONFIG += qgcodeeditor
+CONFIG += qglviewer
 
 INCLUDEPATH += g2m
 
@@ -45,16 +46,17 @@ link_pkgconfig {
   LSB_RELEASE_ID  = $$system(. /etc/os-release; echo "$NAME")
   LSB_RELEASE_REL = $$system(. /etc/os-release; echo "$VERSION_ID")
 
-#  message(This is $$LSB_RELEASE_ID $$LSB_RELEASE_REL)
+  message(This is $$LSB_RELEASE_ID $$LSB_RELEASE_REL)
 
   contains(LSB_RELEASE_ID, Ubuntu): {
     contains(LSB_RELEASE_REL, 21.04) : {
-      LIBS += -lQGLViewer-qt5 -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
-    } else {
-      LIBS += -lQGLViewer-qt5 -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
+      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
+    }
+    contains(LSB_RELEASE_REL, 22.04) : {
+      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
     }
   } else {
-    LIBS += -lQGLViewer -lQGCodeEditor -lGLEW -lGLU -lGL -lglut
+    LIBS += -lQGLViewer -lGLEW -lGLU -lGL -lglut
   }
 }
 
