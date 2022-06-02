@@ -1,17 +1,19 @@
-name: CI
-
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
 jobs:
-  prod:
-    name: Build and test
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - bionic
+          - focal
+          - impish
+          - jammy
     runs-on: ubuntu-22.04
     steps:
       - name: checkout code
