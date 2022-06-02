@@ -44,7 +44,7 @@ jobs:
 
     - name: Build and install QGCoder/libqgcodeeditor
       run: |
-￼       git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
+        git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
 ￼       pushd libqgcodeeditor
 ￼       mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 ￼       dpkg-buildpackage -b -rfakeroot -us -uc
