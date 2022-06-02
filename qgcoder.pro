@@ -69,6 +69,16 @@ QT      *= opengl xml gui core
 
 OTHER_FILES += README.md
 
+unix {
+  qgcoder-deskop.path = /usr/share/applications
+  qgcoder-deskop.files = qgcoder.desktop
+  qgcoder-icon.path = /usr/share/icons/hicolor/256x256/apps
+  qgcoder-icon.files = icons/qgcoder.png
+
+  INSTALLS += qgcoder-deskop
+  INSTALLS += qgcoder-icon
+}
+
 DIRS_DC = object_script.* .ui .moc .rcc .obj *.pro.user $$TARGET
 
 unix:QMAKE_DISTCLEAN  += -r $$DIRS_DC
