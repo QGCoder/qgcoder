@@ -47,7 +47,9 @@ public slots:
 
     virtual void toggleAutoZoom();
     virtual void showFullScreen();
-    
+    virtual void zoomIn();
+    virtual void zoomOut();
+
     virtual void helpIssues();
     virtual void helpChat();
 
@@ -62,6 +64,8 @@ private:  // functions
 
     void closeEvent(QCloseEvent *) Q_DECL_OVERRIDE;
 
+    void setStyle();
+
 private: // data
     QString home_dir, openFile;
     bool bFileMode;
@@ -75,6 +79,8 @@ private: // data
     View *view;
 
     g2m::g2m *g2m;
+
+    int fontSize;
 
     QSettings *settings;
 };

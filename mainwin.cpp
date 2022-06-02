@@ -43,6 +43,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
 
     connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
+    connect(ui->actionZoom_In, SIGNAL(triggered()), this, SLOT(zoomIn()));
+    connect(ui->actionZoom_out, SIGNAL(triggered()), this, SLOT(zoomOut()));
 
     //connect(ui->command, SIGNAL(keyPressed(QKeyEvent *)), view, SLOT(keyPressEvent(QKeyEvent *)));
 
@@ -53,6 +55,8 @@ MainWindow::MainWindow(QWidget *parent) :
     openFile = "";
 
     loadSettings();
+
+    setStyle();
 
     QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
 }
@@ -74,14 +78,28 @@ void MainWindow::showFullScreen()
         showNormal();
 }
 
-void MainWindow::changedCommand() 
+void MainWindow::zoomIn() {
+    fontSize += 1;
+    setStyle();
+}
+
+void MainWindow::zoomOut() {
+    fontSize -= 1; if (fontSize <1) fontSize = 1;
+    setStyle();
+}
+
+void MainWindow::setStyle() {
+    setStyleSheet(QString("QWidget { font-size: %1pt; font-family: \"Courier\"; background-color: #00003B; color: #FFA700; font: bold }").arg(fontSize));
+}
+
+void MainWindow::changedCommand()
 {
 QString str;
 
     openFile = "";
     bFileMode = false;
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-    str = "qgcoder :- ";
+    str = "QGCoder :- ";
     setWindowTitle(str);
     parseCommand();
 }
@@ -173,6 +191,8 @@ void MainWindow::loadSettings()
     view->setAutoZoom(settings->value("autoZoom", view->autoZoom()).toBool());
     ui->action_AutoZoom->setChecked(settings->value("autoZoom", view->autoZoom()).toBool());
 
+    fontSize = settings->value("fontsize", 12).toInt();
+
     rs274 = settings->value("rs274", "").toString();
     tooltable = settings->value("tooltable", "").toString();
     gcodefile = settings->value("gcodefile", "").toString();
@@ -188,7 +208,7 @@ void MainWindow::loadSettings()
 }
 
 void MainWindow::loadSettingsCommand() {
-    QString command("echo -n 'Hello, World!' | hf2gcode -q");
+    QString command("/bin/echo -en 'Hello, World!' | hf2gcode");
     settings->beginGroup("gui");
     ui->command->document()->setPlainText(settings->value("command", command).toString());
     settings->endGroup();
@@ -209,6 +229,7 @@ void MainWindow::saveSettings() {
   settings->setValue("command", ui->command->toPlainText());
 
   settings->setValue("autoZoom", ui->action_AutoZoom->isChecked());
+  settings->setValue("fontsize", fontSize);
 
   settings->setValue("rs274", rs274);
   settings->setValue("tooltable", tooltable);
@@ -300,7 +321,7 @@ QString str;
             }
         file.close();  
 
-        str = "GCoder :- " +  filename;
+        str = "QGCoder :- " +  filename;
         setWindowTitle(str);
 
         // ui->gcode->highlightLine(1);
@@ -337,7 +358,7 @@ QString str;
         out << ui->gcode->toPlainText();
         file.close();
 
-        str = "GCoder:- " +  filename;
+        str = "QGCoder:- " +  filename;
         setWindowTitle(str);
         return 0;
         }

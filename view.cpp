@@ -99,7 +99,7 @@ void View::clear() {
     aabb[4] = std::numeric_limits<double>::min();
     aabb[5] = std::numeric_limits<double>::min();
 
-    setSceneRadius(1);
+    //setSceneRadius(1);
     
     lines.clear();
     dirty = false;
@@ -126,15 +126,13 @@ void View::init() {
     //glDisable(GL_CULL_FACE);
     //glLineStipple(2, 0xFFFF);
     glDisable(GL_LIGHTING);
-    glClearColor(0.25,0.25,0.25,0);
+    glClearColor(0.0,0.0,0.25,0);
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     //glLineWidth(3);
   
-    //setGridIsDrawn();
-    
-    if (!restoreStateFromFile()) {
-        showEntireScene();
-    }
+    setGridIsDrawn();
+    setFPSIsDisplayed();
+    setAxisIsDrawn();
     
     setMouseBinding(Qt::AltModifier, Qt::RightButton, SHOW_ENTIRE_SCENE, true, Qt::MidButton);
 
@@ -145,8 +143,8 @@ void View::init() {
 
 void View::initializeGL() {
     QGLViewer::initializeGL();
-    camera()->setZNearCoefficient(0.000001);
-    camera()->setZClippingCoefficient(1000.0);
+    //camera()->setZNearCoefficient(0.000001);
+    //camera()->setZClippingCoefficient(1000.0);
 }
 
 void View::appendCanonLine(canonLine *l) {
@@ -174,9 +172,6 @@ void View::appendCanonLine(canonLine *l) {
         }
 
         //qDebug() << "getAABB()" << aabb[0] << aabb[1] << aabb[2] << aabb[3] << aabb[4] << aabb[5];
-
-        Vec c((aabb[0] + aabb[3])/2, (aabb[1] + aabb[4])/2, (aabb[2] + aabb[5])/2);
-        setSceneCenter(c);
     }
 }
 
@@ -240,8 +235,8 @@ void View::drawObjects(bool simplified = false) {
             double interval_size = move_length /(double)(n_samples-1);
             
             if (l->getMotionType() == TRAVERSE) {
-                glColor3f(0.0, 128.0/255.0 , 128.0/255.0);
-                glLineWidth(1);
+                glColor3f(0.0, 128.0/255.0 , 0.0/255.0);
+                glLineWidth(2);
             } else {
                 glColor3f(255.0/255.0, 215.0/255.0, 94.0/255.0);
                 glLineWidth(line_width);
@@ -261,7 +256,7 @@ void View::drawObjects(bool simplified = false) {
     }
     
     glLineWidth(2);
-    glColor3f(0.0, 0.0/255.0 , 0.0/255.0);
+    glColor3f(255.0, 0.0/255.0 , 0.0/255.0);
     glBegin(GL_LINES);
 
     // Top
@@ -296,10 +291,21 @@ void View::drawObjects(bool simplified = false) {
     
     glEnd();
 
+    Vec qmin, qmax;
+    qmin.x = aabb[0];
+    qmin.y = aabb[1];
+    qmin.z = aabb[2];
+
+    qmax.x = aabb[3];
+    qmax.y = aabb[4];
+    qmax.z = aabb[5];
+    setSceneBoundingBox(qmin, qmax);
+
+    Vec c((aabb[0] + aabb[3])/2, (aabb[1] + aabb[4])/2, (aabb[2] + aabb[5])/2);
+    setSceneCenter(c);
 }
 
 void View::draw() {
-  // TODO render objects
     drawObjects();
 }
 
@@ -313,14 +319,6 @@ void View::postDraw() {
 
 void View::update() {
     // qDebug() << "View::update";
-
-    Vec c((aabb[0] + aabb[3])/2, (aabb[1] + aabb[4])/2, (aabb[2] + aabb[5])/2);
-    double radius = qMax(aabb[0] + aabb[3], aabb[1] + aabb[4]);
-    radius = qMax(radius, aabb[2] + aabb[5]) / 2;
-    
-    setSceneRadius(radius);
-
-    qDebug() << "radius" << radius;
 
     if (_autoZoom)
         showEntireScene();

@@ -179,17 +179,17 @@ void g2m::interpret() {
             fails++;
         }
         toCanon.waitForReadyRead();
-    } while ( (fails < 100) &&
+    } while ( (fails < 1000) &&
             ( (toCanon.canReadLine()) ||
             ( toCanon.state() != QProcess::NotRunning ) )  );
 
     emit canonLineMessage( l.left(l.size()-1) );
-  
+
     if (fails > 1) {
-        if (fails < 100) {
-            infoMsg("Waited for interpreter over 100  times.");
+        if (fails < 1000) {
+            infoMsg("Waited for interpreter over 1000  times.");
         } else {
-            infoMsg("Waited 100 seconds for interpreter. Giving up.");
+            infoMsg("Waited 1000 seconds for interpreter. Giving up.");
             toCanon.close();
             return;
         }
@@ -318,19 +318,19 @@ void g2m::interpret2(QString tempFile) {
             fails++;
         }
        toCanon.waitForReadyRead();
-    } while ( (fails < 100) &&
+    } while ( (fails < 1000) &&
            ( (toCanon.canReadLine()) ||
             ( toCanon.state() != QProcess::NotRunning ) )  );
 
     emit canonLineMessage( l.left(l.size()-1) );
 
     if (fails > 1) {
-        if (fails < 100) {
-            infoMsg("Waited for interpreter over 100  times.");
-            emit debugMessage("Waited for interpreter over 100  times.");
+        if (fails < 1000) {
+            infoMsg("Waited for interpreter over 1000  times.");
+            emit debugMessage("Waited for interpreter over 1000  times.");
         } else {
-            infoMsg("Waited 100 seconds for interpreter. Giving up.");
-            emit debugMessage("Waited 100 seconds for interpreter. Giving up.");
+            infoMsg("Waited 1000 seconds for interpreter. Giving up.");
+            emit debugMessage("Waited 1000 seconds for interpreter. Giving up.");
             toCanon.close();
             return;
         }
