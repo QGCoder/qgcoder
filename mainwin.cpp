@@ -46,7 +46,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //connect(ui->command, SIGNAL(keyPressed(QKeyEvent *)), view, SLOT(keyPressEvent(QKeyEvent *)));
 
-    connect(ui->action_Donate, SIGNAL(triggered(bool)), this, SLOT(helpDonate()));
     connect(ui->action_Issues, SIGNAL(triggered(bool)), this, SLOT(helpIssues()));
     connect(ui->action_Chat,   SIGNAL(triggered(bool)), this, SLOT(helpChat()));
 
@@ -304,7 +303,7 @@ QString str;
         str = "GCoder :- " +  filename;
         setWindowTitle(str);
 
-        ui->gcode->highlightLine(1);
+        // ui->gcode->highlightLine(1);
 
         openFile = filename;
         bFileMode = true;
@@ -321,7 +320,7 @@ QString str;
 
 void MainWindow::onSaveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save G Code (As)"), openFile, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save G-code (As)"), openFile, tr("G-code Files (*.ngc *.nc);; All files (*.*)"));
     saveInBrowser(fileName);
 }
 
@@ -375,14 +374,10 @@ int MainWindow::onSettings()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void MainWindow::helpDonate() {
-    QDesktopServices::openUrl(QUrl("https://koppi.github.io/"));
-}
-
 void MainWindow::helpIssues() {
     QDesktopServices::openUrl(QUrl("https://github.com/QGCoder/gcoder/issues"));
 }
 
 void MainWindow::helpChat() {
-    QDesktopServices::openUrl(QUrl("https://gitter.im/koppi/gcoder"));
+    QDesktopServices::openUrl(QUrl("https://gitter.im/QGCoder/gcoder"));
 }

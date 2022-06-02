@@ -13,9 +13,7 @@ int main(int argv, char **args)
 
     setlocale(LC_NUMERIC,"C");
 
-    app.setStyleSheet(
-            "QPlainTextEdit{ font-family: \"Courier\"; font-size: 9pt }"
-        );
+    app.setStyleSheet("QPlainTextEdit{ selection-background-color: darkblue } QWidget { font-size: 12pt; font-family: \"Courier\"; background-color: #00003B; color: #FFA700; font: bold }");
 
     QCoreApplication::setOrganizationName(APP_ORGANIZATION);
     QCoreApplication::setApplicationName(APP_NAME);

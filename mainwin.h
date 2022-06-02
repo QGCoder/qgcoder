@@ -48,7 +48,6 @@ public slots:
     virtual void toggleAutoZoom();
     virtual void showFullScreen();
     
-    virtual void helpDonate();
     virtual void helpIssues();
     virtual void helpChat();
 

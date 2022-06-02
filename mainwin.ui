@@ -51,7 +51,7 @@
      <x>0</x>
      <y>0</y>
      <width>561</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -60,8 +60,8 @@
     </property>
     <addaction name="action_Open"/>
     <addaction name="action_Save_As"/>
+    <addaction name="action_Save"/>
     <addaction name="separator"/>
-    <addaction name="action_Settings"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
    </widget>
@@ -79,9 +79,15 @@
     <addaction name="action_Issues"/>
     <addaction name="action_Chat"/>
     <addaction name="separator"/>
-    <addaction name="action_Donate"/>
+   </widget>
+   <widget class="QMenu" name="menu_Edit">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="action_Settings"/>
    </widget>
    <addaction name="menu_File"/>
+   <addaction name="menu_Edit"/>
    <addaction name="menu_View"/>
    <addaction name="menu_Help"/>
   </widget>
@@ -185,6 +191,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="action_Open"/>
+   <addaction name="action_Save"/>
    <addaction name="action_Save_As"/>
    <addaction name="separator"/>
    <addaction name="action_showFullScreen"/>
@@ -274,11 +281,6 @@
     <string>&amp;About</string>
    </property>
   </action>
-  <action name="action_Donate">
-   <property name="text">
-    <string>&amp;Donate</string>
-   </property>
-  </action>
   <action name="action_AutoZoom">
    <property name="checkable">
     <bool>true</bool>
@@ -294,7 +296,7 @@
     <string>Automatic zoom (fit best) on/off.</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Shift+F11</string>
+    <string>F11</string>
    </property>
   </action>
   <action name="action_Issues">
@@ -318,7 +320,7 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>Open G-code (*.ngc) file..</string>
+    <string>Open G-code file...</string>
    </property>
    <property name="toolTip">
     <string>Open G-code (*.ngc) file.</string>
@@ -332,7 +334,7 @@
     <string>&amp;Settings..</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+S</string>
+    <string>F9</string>
    </property>
   </action>
   <action name="action_Save_As">
@@ -341,10 +343,28 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>&amp;Save G-code (*.ngc) file as..</string>
+    <string>&amp;Save &quot;%1&quot; &amp;As...</string>
+   </property>
+   <property name="toolTip">
+    <string>Save G-code file as..</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="action_Save">
+   <property name="icon">
+    <iconset theme="document-save">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Save &quot;%1&quot;</string>
+   </property>
+   <property name="toolTip">
+    <string>Save G-code.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>
