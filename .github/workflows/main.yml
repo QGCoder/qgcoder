@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     name: ${{ matrix.target }}
-    ail-fast: false
+    fail-fast: false
       matrix:
         target:
           - ubuntu-18.04
