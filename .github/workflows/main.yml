@@ -6,7 +6,6 @@ on:
 
 jobs:
   build:
-<<<<<<< HEAD
     name: ${{ matrix.target }}
     ail-fast: false
       matrix:
@@ -15,18 +14,6 @@ jobs:
           - ubuntu-20.04
           - ubuntu-22.04
     runs-on: ${{ matrix.target }}
-=======
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - bionic
-          - focal
-          - impish
-          - jammy
-    runs-on: ubuntu-22.04
->>>>>>> c51330c956da9a100960e110a906c459270d7e85
-
     steps:
     - uses: actions/checkout@v3
 
