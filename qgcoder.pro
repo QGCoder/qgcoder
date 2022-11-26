@@ -7,6 +7,8 @@ CONFIG      += link_pkgconfig
 QMAKE_CXXFLAGS_RELEASE += -O2
 QMAKE_CXXFLAGS_DEBUG   += -O0
 
+QMAKE_CXXFLAGS += -Wno-deprecated-copy
+
 MOC_DIR = .moc
 #OBJECTS_DIR = .obj
 UI_DIR = .ui
@@ -16,6 +18,7 @@ CONFIG += qgcodeeditor
 CONFIG += qglviewer
 
 INCLUDEPATH += g2m
+INCLUDEPATH += /usr/include/QGCodeEditor
 
 HEADERS     = \
     mainwin.h \
