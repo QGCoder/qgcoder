@@ -12,6 +12,14 @@ gh repo clone QGCoder/qgcoder && qgcoder
 qmake && make -j$(nproc)
 ./qgcoder
 ```
+or build and install a Debian package as follows:
+```bash
+gh repo clone QGCoder/qgcoder && qgcoder
+mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+dpkg-buildpackage -b -rfakeroot -us -uc
+sudo dpkg -i ../qgcoder*.deb
+sudo apt -f install
+```
 
 – Tested to run on Ubuntu 22.04. - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
 
