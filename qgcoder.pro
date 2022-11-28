@@ -59,7 +59,7 @@ link_pkgconfig {
       LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
     }
   } else {
-    LIBS += -lQGLViewer -lGLEW -lGLU -lGL -lglut
+    LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
   }
 }
 
