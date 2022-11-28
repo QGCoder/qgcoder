@@ -14,7 +14,7 @@ qmake && make -j$(nproc)
 ```
 or build and install a Debian package as follows:
 ```bash
-gh repo clone QGCoder/qgcoder && qgcoder
+gh repo clone QGCoder/qgcoder && cd qgcoder
 mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 dpkg-buildpackage -b -rfakeroot -us -uc
 sudo dpkg -i ../qgcoder*.deb
