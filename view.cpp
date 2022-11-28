@@ -103,13 +103,13 @@ void View::clear() {
     
     lines.clear();
     dirty = false;
-    //updateGL();
+    updateGLViewer();
 }
 
 void View::resetCamView() {
     camera()->setPosition(initialCameraPosition);
     camera()->setOrientation(initialCameraOrientation);
-    updateGL();
+    updateGLViewer();
 }
 
 void View::init() {
@@ -150,7 +150,7 @@ void View::initializeGL() {
 void View::appendCanonLine(canonLine *l) {
     //QMutexLocker locker(&mutex);
     lines.push_back(l);
-    dirty = true; // for updateGL()
+    dirty = true; // for updateGLViewer()
 
     if (l->isMotion()) {
         Point pos1 = l->point(0);
@@ -325,6 +325,6 @@ void View::update() {
 
     if (dirty) {
         dirty = false;
-        updateGL();
+        updateGLViewer();
     }
 }

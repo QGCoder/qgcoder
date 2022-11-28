@@ -23,6 +23,14 @@ class View : public QGLViewer
 
   void resetCamView();
 
+  void updateGLViewer() {
+#if QGLVIEWER_VERSION < 0x020700
+      this->updateGL();
+#else
+      this->update();
+#endif
+  };
+
   bool autoZoom()const{ return _autoZoom; };
   void setAutoZoom(bool autoZoom){ _autoZoom = autoZoom; update(); };
   void unsetAutoZoom(){ _autoZoom = true; update(); };
