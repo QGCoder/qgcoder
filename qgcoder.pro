@@ -58,6 +58,9 @@ link_pkgconfig {
     contains(LSB_RELEASE_REL, 22.04) : {
       LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
     }
+    contains(LSB_RELEASE_REL, 22.10) : {
+      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
+    }
   } else {
     LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
   }
