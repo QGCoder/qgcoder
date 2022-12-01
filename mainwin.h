@@ -20,7 +20,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = 0, bool fileMode = false, QString fileName = "");
     ~MainWindow();
 
     void parseGcode();
@@ -36,6 +36,7 @@ public slots:
     // load the last command string from the settings
     // used during startup
     virtual void loadSettingsCommand();
+    virtual void loadGCodeFile();
 
     virtual void changedGcode();
     virtual void changedCommand();
@@ -69,7 +70,7 @@ private:  // functions
 
 private: // data
     QString home_dir, openFile;
-    bool bFileMode;
+    bool bFileMode = false;
 
     QString rs274;
     QString tooltable;

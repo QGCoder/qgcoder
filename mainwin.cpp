@@ -8,10 +8,12 @@
 #include <QDebug>
 #include <QStandardPaths>
 
-MainWindow::MainWindow(QWidget *parent) :
+MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    bFileMode = fileMode;
+
     setAttribute(Qt::WA_QuitOnClose);
 
     ui->setupUi(this);
@@ -40,7 +42,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( g2m, SIGNAL( signalError(QString) ),        ui->stderror, SLOT( setPlainText(QString) ) );
 
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-    connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
 
     connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
     connect(ui->actionZoom_In, SIGNAL(triggered()), this, SLOT(zoomIn()));
@@ -52,18 +53,35 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Chat,   SIGNAL(triggered(bool)), this, SLOT(helpChat()));
 
     home_dir = QStandardPaths::locate(QStandardPaths::HomeLocation, QString(), QStandardPaths::LocateDirectory);
-    openFile = "";
+    openFile = fileName;
 
     loadSettings();
 
     setStyle();
 
-    QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
+    if (bFileMode == false) {
+        connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
+        QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
+        ui->dockWidget->setHidden(false);
+        ui->dockWidget_2->setHidden(false);
+    } else {
+        QTimer::singleShot(0, this, SLOT(loadGCodeFile()));
+        ui->dockWidget->setHidden(true);
+        ui->dockWidget_2->setHidden(true);
+    }
 }
 
 MainWindow::~MainWindow()
 {
 
+}
+
+void MainWindow::loadGCodeFile() {
+    if(openFile.length())
+        {
+        if(openInViewer(openFile) == 0)
+            openInBrowser(openFile);
+        }
 }
 
 void MainWindow::toggleAutoZoom() {
@@ -259,7 +277,7 @@ void MainWindow::onOpenFile()
 QString filename;
 QString path = home_dir + "machinekit";
 
-    filename = QFileDialog::getOpenFileName(this, tr("Open GCode"), path, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
+    filename = QFileDialog::getOpenFileName(this, tr("Open G-code"), path, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
     if(filename.length())
         {
         if(openInViewer(filename) == 0)
@@ -284,7 +302,6 @@ QString str;
 
         view->clear();
         bFileMode = true;
-        disconnect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
 
         emit setRS274(rs274);
         emit setToolTable(tooltable);
@@ -313,11 +330,7 @@ QString str;
         while( !ts.atEnd())
             {
             str = ts.readLine();
-            if(str.length()) // don't want blank lines
-                {
-                str = str + "\n";
-                ui->gcode->appendNewPlainText(str);
-                }
+            ui->gcode->appendNewPlainText(str);
             }
         file.close();  
 
