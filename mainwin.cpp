@@ -79,8 +79,9 @@ MainWindow::~MainWindow()
 void MainWindow::loadGCodeFile() {
     if(openFile.length())
         {
-        if(openInViewer(openFile) == 0)
-            openInBrowser(openFile);
+            if(openInViewer(openFile) == 0) {
+                openInBrowser(openFile);
+            }
         }
 }
 
@@ -409,9 +410,9 @@ int MainWindow::onSettings()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MainWindow::helpIssues() {
-    QDesktopServices::openUrl(QUrl("https://github.com/QGCoder/gcoder/issues"));
+    QDesktopServices::openUrl(QUrl("https://github.com/QGCoder/qgcoder/issues"));
 }
 
 void MainWindow::helpChat() {
-    QDesktopServices::openUrl(QUrl("https://gitter.im/QGCoder/gcoder"));
+    QDesktopServices::openUrl(QUrl("https://gitter.im/QGCoder/qgcoder"));
 }
