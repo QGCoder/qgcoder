@@ -16,14 +16,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: install devscripts
+    - name: Install devscripts
       run: |
         sudo apt update -qq
         sudo apt full-upgrade -y                                                
         sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
         mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 
-    - name: build source package
+    - name: Build source package
       env:
         DEBFULLNAME: "Github Actions"
         DEBEMAIL: "jakob.flierl@gmail.com"
@@ -60,19 +60,19 @@ jobs:
         sudo apt -y -f install
         popd
     
-    - name: build binary package
+    - name: Build binary package
       run: dpkg-buildpackage -b -rfakeroot -us -uc
 
-    - name: install binary package
+    - name: Install binary package
       run: sudo dpkg -i ../qgcoder*deb
 
-    - name: install binary package dependencies
+    - name: Install binary package dependencies
       run: sudo apt -f install
 
-    - name: run lintian
+    - name: Run lintian
       run: lintian ../qgcoder*deb | lintian-info
 
-    - name: upload artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.target }}
