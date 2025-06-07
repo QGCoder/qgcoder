@@ -31,7 +31,7 @@ jobs:
         export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
         git fetch --unshallow
         git fetch --tags
-        VERSION="$(git describe --tags --always | sed -e "s/^v//" -e "s/-/+git/")"
+        VERSION="$(git tag -l | tail -n1 | sed -e "s/^v//" -e "s/-/+git/")"
         dch --create \
             --distribution ${TARGET} \
             --package qgcoder \
@@ -47,7 +47,7 @@ jobs:
         git clone https://github.com/QGCoder/libqgcodeeditor
         pushd libqgcodeeditor
         export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
-        VERSION="$(git describe --tags --always | sed -e "s/^v//" -e "s/-/+git/")"
+        VERSION="$(git tag -l | tail -n1 | sed -e "s/^v//" -e "s/-/+git/")"
         dch --create \
             --distribution ${TARGET} \
             --package libqgcodeeditor \
