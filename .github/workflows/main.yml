@@ -58,6 +58,7 @@ jobs:
         dpkg-buildpackage -b -rfakeroot -us -uc
         sudo dpkg -i ../libqgcodeeditor*deb
         sudo apt -y -f install
+        qmake && make && sudo make install # fixme
         popd
     
     - name: Build binary package
