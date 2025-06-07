@@ -1,0 +1,92 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - ubuntu-latest
+    runs-on: ${{ matrix.target }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install devscripts
+      run: |
+        sudo apt update -qq
+        sudo apt full-upgrade -y                                                
+        sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
+        mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+
+    - name: Build source package
+      env:
+        DEBFULLNAME: "Github Actions"
+        DEBEMAIL: "jakob.flierl@gmail.com"
+      run: |
+        export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
+        git fetch --unshallow
+        git fetch --tags
+        VERSION="$(git describe --tags --always | sed -e "s/^v//" -e "s/-/+git/")"
+        dch --create \
+            --distribution ${TARGET} \
+            --package qgcoder \
+            --newversion ${VERSION}~${TARGET}1 \
+            "Automatic build from Github"
+        debuild -S -sa -us -uc -d
+
+    - name: Build and install libqgcodeeditor
+      env:
+        DEBFULLNAME: "Jakob Flierl"
+        DEBEMAIL: "jakob.flierl@gmail.com"
+      run: |
+        git clone https://github.com/QGCoder/libqgcodeeditor
+        pushd libqgcodeeditor
+        export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
+        VERSION="$(git describe --tags --always | sed -e "s/^v//" -e "s/-/+git/")"
+        dch --create \
+            --distribution ${TARGET} \
+            --package libqgcodeeditor \
+            --newversion ${VERSION}~${TARGET}1 \
+            "Automatic build from Github"
+        debuild -S -sa -us -uc -d
+        mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+        dpkg-buildpackage -b -rfakeroot -us -uc
+        sudo dpkg -i ../libqgcodeeditor*deb
+        sudo apt -y -f install
+        popd
+    
+    - name: Build binary package
+      run: dpkg-buildpackage -b -rfakeroot -us -uc
+
+    - name: Install binary package
+      run: sudo dpkg -i ../qgcoder*deb
+
+    - name: Install binary package dependencies
+      run: sudo apt -f install
+
+    - name: Run lintian
+      run: lintian ../qgcoder*deb | lintian-info
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.target }}
+        if-no-files-found: error
+        path: |
+          *.buildinfo
+          *.changes
+          *.dsc
+          *.tar.*
+          *.deb
+          ~/**/*/*.buildinfo
+          ~/**/*/*.changes
+          ~/**/*/*.dsc
+          ~/**/*/*.tar.*
+          ~/**/*/*.deb
+
+          

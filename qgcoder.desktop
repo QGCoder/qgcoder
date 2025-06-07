@@ -1,0 +1,13 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Name=qgcoder
+GenericName=qgcoder
+Comment=G-code editor with 3D preview
+Icon=/usr/share/icons/hicolor/256x256/apps/qgcoder.png
+
+Type=Application
+Categories=Engineering;
+MimeType=text/x.gcode
+Exec=qgcoder %f
+Terminal=false
