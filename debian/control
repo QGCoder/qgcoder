@@ -2,9 +2,8 @@ Source: qgcoder
 Section: misc
 Priority: optional
 Maintainer: Jakob Flierl <jakob.flierl@gmail.com>
-Uploaders: Jakob Flierl <jakob.flierl@gmail.com>
-Build-Depends: debhelper (>= 7.0.50~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew-dev
-Standards-Version: 3.9.1
+Build-Depends: debhelper (>= 12~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew-dev, libqgcodeeditor-qt5-dev
+Standards-Version: 4.6.0
 Homepage: https://github.com/QGCoder
 Vcs-Git: git://github.com/QGCoder/qgcoder
 Vcs-Browser: https://github.com/QGCoder/qgcoder

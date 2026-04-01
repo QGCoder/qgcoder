@@ -134,7 +134,7 @@ void View::init() {
     setFPSIsDisplayed();
     setAxisIsDrawn();
     
-    setMouseBinding(Qt::AltModifier, Qt::RightButton, SHOW_ENTIRE_SCENE, true, Qt::MidButton);
+    setMouseBinding(Qt::AltModifier, Qt::RightButton, SHOW_ENTIRE_SCENE, true, Qt::MiddleButton);
 
     clear();
 

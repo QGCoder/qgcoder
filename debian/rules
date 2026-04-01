@@ -36,7 +36,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 
 	$(MAKE) INSTALL_ROOT=$(CURDIR)/debian/qgcoder install
@@ -55,10 +55,10 @@ binary-indep: build install
 	dh_testdir
 	dh_testroot
 #	dh_installchangelogs ChangeLog
-	dh_installdocs -i
-	dh_install -i
-	dh_installman -i
-	dh_compress -i --exclude=.cpp --exclude=.pri
+	dh_installdocs
+	dh_install
+	dh_installman
+	dh_compress --exclude=.cpp --exclude=.pri
 	dh_fixperms
 	dh_installdeb
 	dh_gencontrol
@@ -70,14 +70,12 @@ binary-arch: build install
 	dh_testdir
 	dh_testroot
 #	dh_installchangelogs ChangeLog
-	dh_installdocs -s README.md
-	dh_install -s --sourcedir=$(CURDIR)/debian/tmp
-#	dh_installman qgcoder.1
+	dh_installdocs README.md
 	dh_installmime
 	dh_installmenu
 	dh_link
 	dh_strip
-	dh_compress -s
+	dh_compress
 	dh_fixperms
 	dh_makeshlibs
 	dh_installdeb

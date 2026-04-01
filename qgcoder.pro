@@ -14,11 +14,13 @@ MOC_DIR = .moc
 UI_DIR = .ui
 RCC_DIR = .rcc
 
-CONFIG += qgcodeeditor
+#CONFIG += qgcodeeditor
 CONFIG += qglviewer
 
 INCLUDEPATH += g2m
 INCLUDEPATH += /usr/include/QGCodeEditor
+
+#LIBS += -lQGCodeEditor
 
 HEADERS     = \
     mainwin.h \
@@ -62,10 +64,13 @@ link_pkgconfig {
       LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
     }
     contains(LSB_RELEASE_REL, 24.04) : {
-      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
+      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut -lqgcodeeditor_qt5
+    }
+    contains(LSB_RELEASE_REL, 26.04) : {
+      LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut -lqgcodeeditor_qt5
     }
   } else {
-    LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut
+    LIBS += -lQGLViewer-qt5 -lGLEW -lGLU -lGL -lglut -lqgcodeeditor_qt5
   }
 }
 
