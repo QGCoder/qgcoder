@@ -1,4 +1,18 @@
 #include <QtWidgets>
+#include <QLoggingCategory>
+#include <QMessageLogContext>
+#include <QString>
+#include <QFile>
+#include <QTextStream>
+
+void customMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
+    Q_UNUSED(type);
+    Q_UNUSED(context);
+    if (msg.contains("QSocketNotifier"))
+        return;
+    QByteArray ba = msg.toLocal8Bit();
+    fprintf(stderr, "%s\n", ba.constData());
+}
 
 #include "mainwin.h"
 
@@ -9,7 +23,8 @@
 
 int main(int argv, char **args)
 {
-    QSharedPointer<QCoreApplication> app;
+    qInstallMessageHandler(customMessageHandler);
+    QApplication *app;
 
     // workaround for https://forum.qt.io/topic/53298/qcommandlineparser-to-select-gui-or-non-gui-mode
 
@@ -27,9 +42,9 @@ int main(int argv, char **args)
     }
 
     if (runCore) {
-        app = QSharedPointer<QCoreApplication>(new QCoreApplication(argv, args));
+        app = static_cast<QApplication*>(new QCoreApplication(argv, args));
     } else {
-        app = QSharedPointer<QCoreApplication>(new QApplication(argv, args));
+        app = new QApplication(argv, args);
     }
 
     // end workaround
@@ -60,6 +75,9 @@ int main(int argv, char **args)
 
     win->show();
 
-    return app->exec();
+    int ret = app->exec();
+    delete win;
+    delete app;
+    return ret;
 }
 

@@ -131,10 +131,15 @@ bool g2m::startInterp(QProcess &tc) {
         return false;
     // run:  rs274 file.ngc
     tc.start( interp , QStringList(file) );
+    if (!tc.waitForStarted(5000)) {
+        infoMsg("Interpreter failed to start");
+        return false;
+    }
     tc.write("3\n"); // "read tool file" command to rs274
     tc.write(tooltable.toLatin1());
     tc.write("\n"); // "enter"
     tc.write("1\n"); // "start interpreting" command to rs274
+    tc.closeWriteChannel();
     return true;
 }
 
@@ -257,6 +262,11 @@ bool g2m::startInterp2(QProcess &tc, QString tempFile) {
 
     tc.start( interp , QStringList(tempFile) );
 
+    if (!tc.waitForStarted(5000)) {
+        infoMsg("Interpreter failed to start");
+        return false;
+    }
+
     tc.write("3\n"); // "read tool file" command to rs274
 
     // qDebug() << tooltable.toLatin1();
@@ -264,6 +274,7 @@ bool g2m::startInterp2(QProcess &tc, QString tempFile) {
     tc.write(tooltable.toLatin1());
     tc.write("\n"); // "enter"
     tc.write("1\n"); // "start interpreting" command to rs274
+    tc.closeWriteChannel();
     return true;
 }
 

@@ -52,7 +52,7 @@ int LexAnalyzer::token2i(unsigned int n, unsigned int offset) {
   if (tokens.size() < n+1 )
     return INT_MIN;
   char * end;
-  int i = strtol( &tokens[n].c_str()[offset], &end, 10 );
+  long i = strtol( &tokens[n].c_str()[offset], &end, 10 );
   //assert ( *end != 0 );
   return i;
 }

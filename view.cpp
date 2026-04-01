@@ -11,6 +11,7 @@
 #include <QKeyEvent>
 #include <QDebug>
 #include <QWidget>
+#include <QSurfaceFormat>
 
 #include "canonMotion.hpp"
 
@@ -74,6 +75,13 @@ void View::keyPressEvent(QKeyEvent *e) {
 View::View(QWidget *parent) : QGLViewer(parent)  {
   setAttribute(Qt::WA_DeleteOnClose);
 
+  QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+  format.setDepthBufferSize(24);
+  format.setStencilBufferSize(0);
+  format.setAlphaBufferSize(0);
+  format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+  setFormat(format);
+
   lines.reserve(20000);
 }
 
@@ -126,7 +134,7 @@ void View::init() {
     //glDisable(GL_CULL_FACE);
     //glLineStipple(2, 0xFFFF);
     glDisable(GL_LIGHTING);
-    glClearColor(0.0,0.0,0.25,0);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     //glLineWidth(3);
   
@@ -148,9 +156,8 @@ void View::initializeGL() {
 }
 
 void View::appendCanonLine(canonLine *l) {
-    //QMutexLocker locker(&mutex);
     lines.push_back(l);
-    dirty = true; // for updateGLViewer()
+    dirty = true;
 
     if (l->isMotion()) {
         Point pos1 = l->point(0);
@@ -170,146 +177,122 @@ void View::appendCanonLine(canonLine *l) {
             aabb[  i] = qMin(aabb[  i], oaabbmin[i]);
             aabb[3+i] = qMax(aabb[3+i], oaabbmax[i]);
         }
-
-        //qDebug() << "getAABB()" << aabb[0] << aabb[1] << aabb[2] << aabb[3] << aabb[4] << aabb[5];
     }
 }
 
-void View::drawObjects(bool simplified = false) {
-    Q_UNUSED(simplified);
-
-    if (lines.size() == 0)
+void View::drawObjects(bool simplified) {
+    if (lines.empty())
         return;
-    
-    //int nbSteps = 600;
-    //int nbSub = 50;
 
-//    QMutexLocker locker(&mutex);
-
-    /*
-    if (simplified) {
-        nbSteps = 60;
-        nbSub = 2;
-        }*/
-
-//    qDebug() << "lines.size: " << lines.size();
-
-    double step_size = 0.1;
-
-    if (simplified)
-        step_size = 0.75;
-    
+    double step_size = simplified ? 0.75 : 0.1;
     double inv_ds = 1.0 / step_size;
 
     int skip_dyn = 1;
     double line_width = 3.0;
 
-    if (lines.size() > 10000) { // skip some segments in big gcode files
-        skip_dyn = 2;
-        line_width = 2.0; // thinner lines
-    }
-
     if (lines.size() > 100000) {
         skip_dyn = 4;
         line_width = 1.0;
+    } else if (lines.size() > 10000) {
+        skip_dyn = 2;
+        line_width = 2.0;
     }
 
-    int skip = (simplified) ? skip_dyn * 2 : skip_dyn;
+    int skip = simplified ? skip_dyn * 2 : skip_dyn;
 
-    //glEnable(GL_MULTISAMPLE);
-    //glEnable(GL_LINE_SMOOTH);
-    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    //glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
+    std::vector<float> traverseVertices;
+    std::vector<float> feedVertices;
+    traverseVertices.reserve(lines.size() * 6);
+    feedVertices.reserve(lines.size() * 6);
 
-    /*
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glHint (GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    */
-    
-    for (unsigned long i = 0; i < lines.size(); i+=skip) {
+    for (size_t i = 0; i < lines.size(); i += skip) {
         g2m::canonLine *l = lines[i];
-        if (l->isMotion()) {
-            double move_length = l->length();
-            int n_samples = std::max((int)(move_length * inv_ds ), 2);
-            double interval_size = move_length /(double)(n_samples-1);
-            
+        if (!l->isMotion())
+            continue;
+
+        double move_length = l->length();
+        int n_samples = std::max(static_cast<int>(move_length * inv_ds), 2);
+        double interval_size = move_length / (n_samples - 1);
+
+        for (int j = 0; j < n_samples - 1; ++j) {
+            double t1 = j * interval_size;
+            double t2 = (j + 1) * interval_size;
+            Point pos1 = l->point(t1);
+            Point pos2 = l->point(t2);
+
+            float vertices[] = {
+                static_cast<float>(pos1.x), static_cast<float>(pos1.y), static_cast<float>(pos1.z),
+                static_cast<float>(pos2.x), static_cast<float>(pos2.y), static_cast<float>(pos2.z)
+            };
+
             if (l->getMotionType() == TRAVERSE) {
-                glColor3f(0.0, 128.0/255.0 , 0.0/255.0);
-                glLineWidth(2);
+                traverseVertices.insert(traverseVertices.end(), vertices, vertices + 6);
             } else {
-                glColor3f(255.0/255.0, 215.0/255.0, 94.0/255.0);
-                glLineWidth(line_width);
+                feedVertices.insert(feedVertices.end(), vertices, vertices + 6);
             }
-
-            glBegin(GL_LINES);
-            for (double m = 0; m <= n_samples-1; m+=0.5) {
-                Point pos1 = l->point( (double)(m) * interval_size);
-                glVertex3f(pos1.x, pos1.y, pos1.z);
-                Point pos2 = l->point( std::min(1.0, (double)(m+0.5) * interval_size));
-                glVertex3f(pos2.x, pos2.y, pos2.z);
-            }
-            glEnd();
         }
-        
-        //glDisable(GL_BLEND);
     }
-    
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, traverseVertices.data());
+
+    glColor3f(0.0, 128.0f/255.0f, 0.0f);
     glLineWidth(2);
-    glColor3f(255.0, 0.0/255.0 , 0.0/255.0);
-    glBegin(GL_LINES);
+    glDrawArrays(GL_LINES, 0, traverseVertices.size() / 3);
 
-    // Top
-    glVertex3f(aabb[0], aabb[1], aabb[2]);
-    glVertex3f(aabb[3], aabb[1], aabb[2]);
-    glVertex3f(aabb[3], aabb[1], aabb[2]);
-    glVertex3f(aabb[3], aabb[1], aabb[5]);
-    glVertex3f(aabb[3], aabb[1], aabb[5]);
-    glVertex3f(aabb[0], aabb[1], aabb[5]);
-    glVertex3f(aabb[0], aabb[1], aabb[5]);
-    glVertex3f(aabb[0], aabb[1], aabb[2]);
-    
-    // Bottom
-    glVertex3f(aabb[0], aabb[4], aabb[2]);
-    glVertex3f(aabb[3], aabb[4], aabb[2]);
-    glVertex3f(aabb[3], aabb[4], aabb[2]);
-    glVertex3f(aabb[3], aabb[4], aabb[5]);
-    glVertex3f(aabb[3], aabb[4], aabb[5]);
-    glVertex3f(aabb[0], aabb[4], aabb[5]);
-    glVertex3f(aabb[0], aabb[4], aabb[5]);
-    glVertex3f(aabb[0], aabb[4], aabb[2]);
-    
-    // Sides
-    glVertex3f(aabb[0], aabb[1], aabb[2]);
-    glVertex3f(aabb[0], aabb[4], aabb[2]);
-    glVertex3f(aabb[3], aabb[1], aabb[2]);
-    glVertex3f(aabb[3], aabb[4], aabb[2]);
-    glVertex3f(aabb[3], aabb[1], aabb[5]);
-    glVertex3f(aabb[3], aabb[4], aabb[5]);
-    glVertex3f(aabb[0], aabb[1], aabb[5]);
-    glVertex3f(aabb[0], aabb[4], aabb[5]);
-    
-    glEnd();
+    glVertexPointer(3, GL_FLOAT, 0, feedVertices.data());
+    glColor3f(255.0f/255.0f, 215.0f/255.0f, 94.0f/255.0f);
+    glLineWidth(static_cast<float>(line_width));
+    glDrawArrays(GL_LINES, 0, feedVertices.size() / 3);
 
-    Vec qmin, qmax;
-    qmin.x = aabb[0];
-    qmin.y = aabb[1];
-    qmin.z = aabb[2];
+    glDisableClientState(GL_VERTEX_ARRAY);
 
-    qmax.x = aabb[3];
-    qmax.y = aabb[4];
-    qmax.z = aabb[5];
-    setSceneBoundingBox(qmin, qmax);
+    glLineWidth(2);
+    glColor3f(1.0f, 0.0f, 0.0f);
 
-    Vec c((aabb[0] + aabb[3])/2, (aabb[1] + aabb[4])/2, (aabb[2] + aabb[5])/2);
-    setSceneCenter(c);
+    float aabbVerts[] = {
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[2]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[3]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[5]),
+        static_cast<float>(aabb[0]), static_cast<float>(aabb[4]), static_cast<float>(aabb[5])
+    };
+
+    glVertexPointer(3, GL_FLOAT, 0, aabbVerts);
+    glDrawArrays(GL_LINES, 0, 24);
+    glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void View::draw() {
-    drawObjects();
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    drawObjects(false);
 }
 
 void View::fastDraw() {
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     drawObjects(true);
 }
 

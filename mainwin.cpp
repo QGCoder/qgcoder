@@ -35,9 +35,9 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     //connect( g2m, SIGNAL( gcodeLineMessage(QString) ), this, SLOT( appendGcodeLine(QString) ) );
     //connect( g2m, SIGNAL( canonLineMessage(QString) ), this, SLOT( appendCanonLine(QString) ) );
 
-    connect( g2m, SIGNAL( signalCanonLine(canonLine*) ), view, SLOT( appendCanonLine(canonLine*) ));
-    connect( g2m, SIGNAL( signalNCend() ),               view, SLOT( update() ) );
-    connect( g2m, SIGNAL( signalError(QString) ),        view, SLOT( update() ) );
+    connect( g2m, SIGNAL( signalCanonLine(canonLine*) ), view, SLOT( appendCanonLine(canonLine*) ), Qt::QueuedConnection);
+    connect( g2m, SIGNAL( signalNCend() ),               view, SLOT( update() ), Qt::QueuedConnection);
+    connect( g2m, SIGNAL( signalError(QString) ),      view, SLOT( update() ), Qt::QueuedConnection);
 
     connect( g2m, SIGNAL( signalError(QString) ),        ui->stderror, SLOT( setPlainText(QString) ) );
 
