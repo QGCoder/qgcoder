@@ -83,6 +83,13 @@ View::View(QWidget *parent) : QGLViewer(parent)  {
   setFormat(format);
 
   lines.reserve(20000);
+
+  aabb[0] = std::numeric_limits<double>::max();
+  aabb[1] = std::numeric_limits<double>::max();
+  aabb[2] = std::numeric_limits<double>::max();
+  aabb[3] = std::numeric_limits<double>::min();
+  aabb[4] = std::numeric_limits<double>::min();
+  aabb[5] = std::numeric_limits<double>::min();
 }
 
 View::~View() {
@@ -134,7 +141,7 @@ void View::init() {
     //glDisable(GL_CULL_FACE);
     //glLineStipple(2, 0xFFFF);
     glDisable(GL_LIGHTING);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.235f, 1.0f);
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     //glLineWidth(3);
   
@@ -156,8 +163,10 @@ void View::initializeGL() {
 }
 
 void View::appendCanonLine(canonLine *l) {
+    QMutexLocker locker(&mutex);
     lines.push_back(l);
     dirty = true;
+    updateGLViewer();
 
     if (l->isMotion()) {
         Point pos1 = l->point(0);
@@ -177,10 +186,65 @@ void View::appendCanonLine(canonLine *l) {
             aabb[  i] = qMin(aabb[  i], oaabbmin[i]);
             aabb[3+i] = qMax(aabb[3+i], oaabbmax[i]);
         }
+
+        double dx = aabb[3] - aabb[0];
+        double dy = aabb[4] - aabb[1];
+        double dz = aabb[5] - aabb[2];
+        double radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5;
+        if (radius > 0.001 && aabb[0] != std::numeric_limits<double>::max()) {
+            setSceneBoundingBox(
+                Vec(aabb[0], aabb[1], aabb[2]),
+                Vec(aabb[3], aabb[4], aabb[5])
+            );
+            setSceneRadius(radius);
+            showEntireScene();
+        }
+    }
+}
+
+void View::setCanonLines(const QVector<canonLine*>& newLines) {
+    QMutexLocker locker(&mutex);
+    lines.assign(newLines.begin(), newLines.end());
+    dirty = true;
+    updateGLViewer();
+
+    aabb[0] = std::numeric_limits<double>::max();
+    aabb[1] = std::numeric_limits<double>::max();
+    aabb[2] = std::numeric_limits<double>::max();
+    aabb[3] = std::numeric_limits<double>::min();
+    aabb[4] = std::numeric_limits<double>::min();
+    aabb[5] = std::numeric_limits<double>::min();
+
+    for (canonLine* l : lines) {
+        if (l->isMotion()) {
+            Point pos1 = l->point(0);
+            Point pos2 = l->point(1);
+
+            aabb[0] = qMin(aabb[0], qMin(pos1.x, pos2.x));
+            aabb[1] = qMin(aabb[1], qMin(pos1.y, pos2.y));
+            aabb[2] = qMin(aabb[2], qMin(pos1.z, pos2.z));
+            aabb[3] = qMax(aabb[3], qMax(pos1.x, pos2.x));
+            aabb[4] = qMax(aabb[4], qMax(pos1.y, pos2.y));
+            aabb[5] = qMax(aabb[5], qMax(pos1.z, pos2.z));
+        }
+    }
+
+    double dx = aabb[3] - aabb[0];
+    double dy = aabb[4] - aabb[1];
+    double dz = aabb[5] - aabb[2];
+    double radius = std::sqrt(dx*dx + dy*dy + dz*dz) * 0.5;
+    if (radius > 0.001 && aabb[0] != std::numeric_limits<double>::max()) {
+        setSceneBoundingBox(
+            Vec(aabb[0], aabb[1], aabb[2]),
+            Vec(aabb[3], aabb[4], aabb[5])
+        );
+        setSceneRadius(radius);
+        showEntireScene();
     }
 }
 
 void View::drawObjects(bool simplified) {
+    QMutexLocker locker(&mutex);
     if (lines.empty())
         return;
 
@@ -248,7 +312,7 @@ void View::drawObjects(bool simplified) {
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glLineWidth(2);
-    glColor3f(1.0f, 0.0f, 0.0f);
+    glColor3f(1.0f, 1.0f, 1.0f);
 
     float aabbVerts[] = {
         static_cast<float>(aabb[0]), static_cast<float>(aabb[1]), static_cast<float>(aabb[2]),
@@ -285,13 +349,13 @@ void View::drawObjects(bool simplified) {
 }
 
 void View::draw() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.235f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     drawObjects(false);
 }
 
 void View::fastDraw() {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.235f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     drawObjects(true);
 }

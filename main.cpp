@@ -15,6 +15,7 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 }
 
 #include "mainwin.h"
+#include "g2m.hpp"
 
 #define APP_VERSION QString("2016")
 #define APP_NAME QString("gcoder")
@@ -23,6 +24,7 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 
 int main(int argv, char **args)
 {
+    qRegisterMetaType<QVector<canonLine*>>("QVector<canonLine*>");
     qInstallMessageHandler(customMessageHandler);
     QApplication *app;
 

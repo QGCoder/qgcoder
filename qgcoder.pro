@@ -27,6 +27,7 @@ HEADERS     = \
     view.h \
     g2m/canonLine.hpp    g2m/canonMotionless.hpp  g2m/gplayer.hpp        g2m/linearMotion.hpp   g2m/nanotimer.hpp \
     g2m/canonMotion.hpp  g2m/g2m.hpp              g2m/helicalMotion.hpp  g2m/machineStatus.hpp  g2m/point.hpp \
+    g2m/g2mworker.h \
     lex_analyzer.hpp	settings_dlg.h
     
 
@@ -36,6 +37,7 @@ SOURCES     = \
     view.cpp \
     g2m/canonLine.cpp    g2m/canonMotionless.cpp  g2m/helicalMotion.cpp  g2m/machineStatus.cpp \
     g2m/canonMotion.cpp  g2m/g2m.cpp              g2m/linearMotion.cpp   g2m/nanotimer.cpp \
+    g2m/g2mworker.cpp \
     lex_analyzer.cpp     settings_dlg.cpp
 
 target.path = /usr/bin

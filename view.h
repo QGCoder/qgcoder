@@ -27,7 +27,7 @@ class View : public QGLViewer
 #if QGLVIEWER_VERSION < 0x020700
       this->updateGL();
 #else
-      this->update();
+      QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
 #endif
   };
 
@@ -39,6 +39,7 @@ class View : public QGLViewer
   void close();
 
   void appendCanonLine(canonLine *l);
+  void setCanonLines(const QVector<canonLine*>& lines);
   void clear();
 
   void update();

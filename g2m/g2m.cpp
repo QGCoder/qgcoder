@@ -26,6 +26,8 @@
 #include <stdlib.h>
 
 #include <QProcess>
+#include <QTimer>
+#include <QDebug>
 #include <QStringList>
 #include <QString>
 #include <QTime>
@@ -34,8 +36,10 @@
 #include <QFileDialog>
 #include <QStatusBar>
 #include <QFile>
+#include <QDir>
 #include <QTextStream>
 #include <QTemporaryFile>
+#include <QThread>
 
 #include <QDebug>
  
@@ -46,7 +50,15 @@
 namespace g2m {
 
 void g2m::interpret_file() {
-    lineVector.clear();
+    if (file.isEmpty() || (!file.endsWith(".ngc") && !file.endsWith(".canon"))) {
+        infoMsg("No valid g-code file to interpret");
+        return;
+    }
+    
+    interpret_file_async();
+}
+
+void g2m::interpret_file_async() {
     nanotimer timer;
     timer.start();
     gcode_lines = 0;
@@ -117,7 +129,17 @@ void g2m::interpret_file() {
 
 ///ask for a tool table, even if one is configured - user may wish to change it
 bool g2m::chooseToolTable() {
-  if (!QFileInfo(tooltable).exists()){
+  if (tooltable.isEmpty() || !QFileInfo(tooltable).exists()){
+    QString defaultTooltable = QDir::tempPath() + "/qgcoder.tooltable";
+    QFile file(defaultTooltable);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << "T1 P1 Z0.0 D0.125000 ; 1/8 inch end mill\n";
+        out << "T2 P2 Z0.0 D0.062500 ; 1/4 inch end mill\n";
+        file.close();
+        tooltable = defaultTooltable;
+        return true;
+    }
     infoMsg(" cannot find tooltable! ");
     emit debugMessage(" cannot find tooltable! ");
     return false;
@@ -129,16 +151,35 @@ bool g2m::chooseToolTable() {
 bool g2m::startInterp(QProcess &tc) {
     if (!chooseToolTable())
         return false;
-    // run:  rs274 file.ngc
+    tc.setProcessChannelMode(QProcess::SeparateChannels);
     tc.start( interp , QStringList(file) );
     if (!tc.waitForStarted(5000)) {
         infoMsg("Interpreter failed to start");
         return false;
     }
-    tc.write("3\n"); // "read tool file" command to rs274
-    tc.write(tooltable.toLatin1());
-    tc.write("\n"); // "enter"
-    tc.write("1\n"); // "start interpreting" command to rs274
+    tc.write("3\n");
+    if (!tc.waitForReadyRead(2000)) {
+        if (tc.state() == QProcess::NotRunning) {
+            std::string err = tc.readAllStandardError().constData();
+            infoMsg("Interpreter died: " + err);
+            return false;
+        }
+    }
+    QString resp = tc.readAllStandardOutput();
+    if (!resp.contains("name of tool file")) {
+        tc.waitForReadyRead(1000);
+        resp = tc.readAll();
+    }
+    QByteArray toolPath = tooltable.toLocal8Bit();
+    tc.write(toolPath);
+    tc.write("\n");
+    tc.waitForReadyRead(2000);
+    resp = tc.readAllStandardOutput();
+    if (resp.contains("Cannot open")) {
+        infoMsg("Error: Cannot open tooltable file. Check file permissions and path.");
+        return false;
+    }
+    tc.write("1\n");
     tc.closeWriteChannel();
     return true;
 }
@@ -209,8 +250,12 @@ void g2m::interpret() {
     	return;
     }
 
-    if (!foundEOF) {
-    	infoMsg("Warning: file data not terminated correctly. If the file is terminated correctly, this indicates a problem interpreting the file.");
+    if (!foundEOF && toCanon.state() == QProcess::NotRunning) {
+        QVector<canonLine*> allLines;
+        for (canonLine* line : lineVector) {
+            allLines.append(line);
+        }
+        emit signalCanonLines(allLines);
     }
 
     emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
@@ -253,13 +298,12 @@ void g2m::infoMsg(std::string s) {
 }
 
 /// set the tooltable and start interpreting input from stdin. called from interpret()
+/// set the tooltable and start interpreting input from stdin. called from interpret()
 bool g2m::startInterp2(QProcess &tc, QString tempFile) {
     if (!chooseToolTable())
         return false;
     // run:  rs274 file.ngc
-
-    // qDebug() << QStringList(tempFile);
-
+    tc.setProcessChannelMode(QProcess::SeparateChannels);
     tc.start( interp , QStringList(tempFile) );
 
     if (!tc.waitForStarted(5000)) {
@@ -267,13 +311,26 @@ bool g2m::startInterp2(QProcess &tc, QString tempFile) {
         return false;
     }
 
-    tc.write("3\n"); // "read tool file" command to rs274
+    tc.write("3\n");
 
-    // qDebug() << tooltable.toLatin1();
+    QString resp;
 
-    tc.write(tooltable.toLatin1());
-    tc.write("\n"); // "enter"
-    tc.write("1\n"); // "start interpreting" command to rs274
+    tc.waitForReadyRead(100);
+    resp = tc.readAllStandardOutput();
+
+    QByteArray toolPath = tooltable.toLocal8Bit();
+    tc.write(toolPath);
+    tc.write("\n");
+    tc.waitForReadyRead(3000);
+    resp = tc.readAllStandardOutput();
+    
+    if (resp.contains("Cannot open")) {
+        infoMsg("Error: Cannot open tooltable file. Check file permissions and path.");
+        emit debugMessage("Cannot open tooltable: " + tooltable);
+        return false;
+    }
+
+    tc.write("1\n");
     tc.closeWriteChannel();
     return true;
 }
@@ -328,12 +385,21 @@ void g2m::interpret2(QString tempFile) {
             //std::cout << " ERROR: toCanon.canReadLine() fails="<< fails << "\n";
             fails++;
         }
-       toCanon.waitForReadyRead();
+        if (!toCanon.waitForReadyRead(500))
+            break;
     } while ( (fails < 1000) &&
            ( (toCanon.canReadLine()) ||
             ( toCanon.state() != QProcess::NotRunning ) )  );
 
     emit canonLineMessage( l.left(l.size()-1) );
+
+    if (!foundEOF && toCanon.state() == QProcess::NotRunning) {
+        QVector<canonLine*> allLines;
+        for (canonLine* line : lineVector) {
+            allLines.append(line);
+        }
+        emit signalCanonLines(allLines);
+    }
 
     if (fails > 1) {
         if (fails < 1000) {
@@ -361,6 +427,9 @@ void g2m::interpret2(QString tempFile) {
   }
 
     emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
+
+    toCanon.kill();
+    toCanon.waitForFinished();
     return;
 }
 

@@ -2,13 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QProgressBar>
 
 #include <QSettings>
 
 #include <QGCodeEditor/QGCodeEditor.h>
 
 #include "view.h"
-#include "g2m.hpp"
+#include "g2m/g2mworker.h"
 #include "settings_dlg.h"
 
 namespace Ui {
@@ -41,6 +42,9 @@ public slots:
     virtual void changedGcode();
     virtual void changedCommand();
 
+    virtual void showProgressBar();
+    virtual void hideProgressBar();
+
     virtual void onOpenFile();
     virtual void onSaveAs();
     virtual int onSettings();
@@ -67,6 +71,7 @@ private:  // functions
     void closeEvent(QCloseEvent *) Q_DECL_OVERRIDE;
 
     void setStyle();
+    void createG2mWorker();
 
 private: // data
     QString home_dir, openFile;
@@ -80,7 +85,10 @@ private: // data
 
     View *view;
 
-    g2m::g2m *g2m;
+    g2m::G2mWorker *g2mWorker;
+    QThread *g2mThread;
+
+    QProgressBar *progressBar;
 
     int fontSize;
 

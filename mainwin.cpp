@@ -7,6 +7,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include <QStandardPaths>
+#include <QProgressBar>
 
 MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     QMainWindow(parent),
@@ -24,22 +25,16 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
 
     setCentralWidget(view);
 
-    g2m = new g2m::g2m(); // g-code interpreter
+    progressBar = new QProgressBar(this);
+    progressBar->setMaximumWidth(120);
+    progressBar->setTextVisible(false);
+    progressBar->setRange(0, 0);
+    progressBar->hide();
+    statusBar()->addPermanentWidget(progressBar);
 
-    connect( this, SIGNAL( setGcodeFile(QString) ),     g2m, SLOT( setFile(QString)) );
-    connect( this, SIGNAL( setRS274(QString) ),         g2m, SLOT( setInterp(QString)) );
-    connect( this, SIGNAL( setToolTable(QString) ),     g2m, SLOT( setToolTable(QString)) );
-    connect( this, SIGNAL( interpret() ),               g2m, SLOT( interpret_file() ) );
+    createG2mWorker();
 
-    //connect( g2m, SIGNAL( debugMessage(QString) ),     this, SLOT( debugMessage(QString) ) );
-    //connect( g2m, SIGNAL( gcodeLineMessage(QString) ), this, SLOT( appendGcodeLine(QString) ) );
-    //connect( g2m, SIGNAL( canonLineMessage(QString) ), this, SLOT( appendCanonLine(QString) ) );
-
-    connect( g2m, SIGNAL( signalCanonLine(canonLine*) ), view, SLOT( appendCanonLine(canonLine*) ), Qt::QueuedConnection);
-    connect( g2m, SIGNAL( signalNCend() ),               view, SLOT( update() ), Qt::QueuedConnection);
-    connect( g2m, SIGNAL( signalError(QString) ),      view, SLOT( update() ), Qt::QueuedConnection);
-
-    connect( g2m, SIGNAL( signalError(QString) ),        ui->stderror, SLOT( setPlainText(QString) ) );
+    connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
 
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
 
@@ -62,10 +57,12 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     if (bFileMode == false) {
         connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
         QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
+        QTimer::singleShot(100, this, SLOT(changedGcode()));
         ui->dockWidget->setHidden(false);
         ui->dockWidget_2->setHidden(false);
     } else {
         QTimer::singleShot(0, this, SLOT(loadGCodeFile()));
+        QTimer::singleShot(100, this, SLOT(changedGcode()));
         ui->dockWidget->setHidden(true);
         ui->dockWidget_2->setHidden(true);
     }
@@ -73,7 +70,10 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
 
 MainWindow::~MainWindow()
 {
-
+    if (g2mThread) {
+        g2mThread->quit();
+        g2mThread->wait();
+    }
 }
 
 void MainWindow::loadGCodeFile() {
@@ -95,6 +95,29 @@ void MainWindow::showFullScreen()
         showMaximized();
     else
         showNormal();
+}
+
+void MainWindow::createG2mWorker() {
+    g2mThread = new QThread(this);
+    g2mWorker = new g2m::G2mWorker();
+    g2mWorker->moveToThread(g2mThread);
+
+    connect(g2mThread, &QThread::finished, g2mWorker, &QObject::deleteLater);
+
+    connect( this, &MainWindow::setGcodeFile,     g2mWorker, &g2m::G2mWorker::setFile, Qt::QueuedConnection);
+    connect( this, &MainWindow::setRS274,         g2mWorker, &g2m::G2mWorker::setInterp, Qt::QueuedConnection);
+    connect( this, &MainWindow::setToolTable,     g2mWorker, &g2m::G2mWorker::setToolTable, Qt::QueuedConnection);
+    connect( this, &MainWindow::interpret,       g2mWorker, &g2m::G2mWorker::process, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
+
+    connect( g2mWorker, &g2m::G2mWorker::signalNCend,               view, &View::update, Qt::QueuedConnection);
+    connect( g2mWorker, &g2m::G2mWorker::signalError,               view, &View::update, Qt::QueuedConnection);
+    connect( g2mWorker, &g2m::G2mWorker::signalCanonLines,          view, &View::setCanonLines, Qt::QueuedConnection);
+    connect( g2mWorker, &g2m::G2mWorker::debugMessage,              this, [](QString msg) { qDebug() << "G2M:" << msg; });
+    connect( g2mWorker, &g2m::G2mWorker::signalNCend,              this, &MainWindow::hideProgressBar);
+    connect( g2mWorker, &g2m::G2mWorker::signalError,              this, &MainWindow::hideProgressBar);
+    connect( g2mWorker, &g2m::G2mWorker::signalCanonLines,         this, &MainWindow::hideProgressBar);
+    connect( g2mWorker, &g2m::G2mWorker::signalError,              this, [this](QString msg) { ui->stderror->setPlainText(msg); });
+    connect( g2mThread, &QThread::finished, this, &MainWindow::hideProgressBar);
 }
 
 void MainWindow::zoomIn() {
@@ -144,12 +167,25 @@ void MainWindow::changedGcode() {
 
         view->clear();
 
-        emit setRS274(rs274);
-        emit setToolTable(tooltable);
-        emit setGcodeFile(gcodefile);
-
-        emit interpret();
+        if (!g2mWorker || !g2mThread) {
+            createG2mWorker();
+            g2mThread->start();
         }
+
+        g2mWorker->setInterp(rs274);
+        g2mWorker->setToolTable(tooltable);
+        g2mWorker->setFile(gcodefile);
+        showProgressBar();
+        
+        if (g2mThread->isRunning()) {
+            QMetaObject::invokeMethod(g2mWorker, "process", Qt::QueuedConnection);
+        } else {
+            g2mThread->start();
+            QTimer::singleShot(50, this, [this]() {
+                g2mWorker->process();
+            });
+        }
+    }
 }
 
 void MainWindow::appendCanonLine(g2m::canonLine* l) {
@@ -157,38 +193,39 @@ void MainWindow::appendCanonLine(g2m::canonLine* l) {
 }
 
 void MainWindow::parseCommand() {
-    QProcess sh;
-    //sh.setProcessChannelMode(QProcess::MergedChannels);
-    sh.setProcessChannelMode(QProcess::SeparateChannels);
-    
-    QFile f( "/tmp/gcoder.sh" );
-    if ( f.open( QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text) ) {
-        QTextStream out(&f);
-        out << ui->command->toPlainText();
-        f.close();
-    }
+    QTimer::singleShot(0, this, [this]() {
+        QProcess sh;
+        sh.setProcessChannelMode(QProcess::SeparateChannels);
+        
+        QFile f( "/tmp/gcoder.sh" );
+        if ( f.open( QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text) ) {
+            QTextStream out(&f);
+            out << ui->command->toPlainText();
+            f.close();
+        }
 
-    if (!f.setPermissions(QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther)) {
-        qDebug("XXX");
-    }
+        if (!f.setPermissions(QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther)) {
+            qDebug("XXX");
+        }
 
-    sh.start("bash", QStringList() << "-c" << "timeout 1 /tmp/gcoder.sh");
+        sh.start("bash", QStringList() << "-c" << "timeout 1 /tmp/gcoder.sh");
 
-    if (!sh.waitForStarted()) {
+        if (!sh.waitForStarted()) {
+            sh.close();
+            sh.waitForFinished(-1);
+            return;
+        }
+
+        if (!sh.waitForFinished(-1)) {
+        }
+
+        ui->gcode->setPlainText(sh.readAllStandardOutput());
+        ui->stderror->setPlainText(sh.readAllStandardError());
+
         sh.close();
-        //sh.kill();
-        sh.waitForFinished(-1);
-        return; // report error
-    }
 
-    if (!sh.waitForFinished(-1)) {
-        // XXX http://stackoverflow.com/questions/10777147/terminate-an-ongoing-qprocess-that-is-running-inside-a-qthread
-    }
-
-    ui->gcode->setPlainText(sh.readAllStandardOutput());
-    ui->stderror->setPlainText(sh.readAllStandardError());
-
-    sh.close();
+        QTimer::singleShot(0, this, SLOT(changedGcode()));
+    });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -308,7 +345,6 @@ QString str;
         emit setToolTable(tooltable);
         emit setGcodeFile(gcodefile);
 
-        emit interpret();
         return 0;
         }
     else 
@@ -415,4 +451,12 @@ void MainWindow::helpIssues() {
 
 void MainWindow::helpChat() {
     QDesktopServices::openUrl(QUrl("https://gitter.im/QGCoder/qgcoder"));
+}
+
+void MainWindow::showProgressBar() {
+    progressBar->show();
+}
+
+void MainWindow::hideProgressBar() {
+    progressBar->hide();
 }

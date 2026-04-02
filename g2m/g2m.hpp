@@ -60,8 +60,10 @@ class g2m : public QObject {
     */
 
     public slots:
-        /// run the interpreter
+        /// run the interpreter (async wrapper)
         void interpret_file();
+        /// actual interpreter implementation
+        void interpret_file_async();
         /// set the path to the .ngc g-code file
         void setFile(QString infile) {
             emit debugMessage( tr("g2m: setting file %1").arg(infile) ); 
@@ -94,6 +96,8 @@ class g2m : public QObject {
         void signalNCend();
         // emitted when interpreter errored
         void signalError(QString s);
+        // emitted when parsing complete with all canon lines
+        void signalCanonLines(QVector<canonLine*> lines);
         
     protected:    
         bool chooseToolTable();
