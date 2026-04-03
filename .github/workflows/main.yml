@@ -11,13 +11,18 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - ubuntu-latest
+          - ubuntu-24.04
     runs-on: ${{ matrix.target }}
     steps:
     - uses: actions/checkout@v3
 
+    - name: upgrade
+      run: sudo apt update && sudo apt dist-upgrade
+
     - name: Install devscripts
       run: |
+        sudo apt update -qq
+        sudo apt full-upgrade -y
         sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
         mk-build-deps -i -r --root-cmd sudo debian/control 
 
