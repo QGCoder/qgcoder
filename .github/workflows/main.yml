@@ -24,7 +24,6 @@ jobs:
         sudo apt update -qq
         sudo apt full-upgrade -y
         sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
-        mk-build-deps -i -r --root-cmd sudo debian/control 
 
     - name: Build source package
       env:
