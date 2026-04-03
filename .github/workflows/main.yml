@@ -63,6 +63,9 @@ jobs:
         sudo apt -y -f install
         qmake && make && sudo make install # fixme
         popd
+
+    - name: Install build dependencies
+      run: mk-build-deps -i -s sudo "apt --yes --no-install-recommends"
     
     - name: Build binary package
       run: dpkg-buildpackage -b -rfakeroot -us -uc
