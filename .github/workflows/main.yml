@@ -61,7 +61,7 @@ jobs:
         popd
 
     - name: Install build dependencies
-      run: mk-build-deps -i -s sudo "apt --yes --no-install-recommends"
+      run: mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
     
     - name: Build binary package
       run: dpkg-buildpackage -b -rfakeroot -us -uc
