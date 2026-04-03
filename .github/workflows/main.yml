@@ -18,8 +18,6 @@ jobs:
 
     - name: Install devscripts
       run: |
-        sudo apt update -qq
-        sudo apt full-upgrade -y                                                
         sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
         mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
 
