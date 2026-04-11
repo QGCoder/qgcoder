@@ -8,7 +8,7 @@ An interactive G-code editing GUI.
 
 * Next: clone, build and run ```qgcoder``` as follows:
 ```bash
-gh repo clone QGCoder/qgcoder && qgcoder
+gh repo clone QGCoder/qgcoder && cd qgcoder
 qmake && make -j$(nproc)
 ./qgcoder
 ```
