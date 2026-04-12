@@ -26,6 +26,10 @@ build-stamp: $(QUILT_STAMPFN)
 
 	touch $@
 
+build-indep: build-stamp
+
+build-arch: build-stamp
+
 clean:
 	dh_testdir
 	dh_testroot

@@ -2,7 +2,7 @@ Source: qgcoder
 Section: misc
 Priority: optional
 Maintainer: Jakob Flierl <jakob.flierl@gmail.com>
-Build-Depends: debhelper (>= 12~), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew-dev, libqgcodeeditor-qt5-dev
+Build-Depends: debhelper-compat (= 13), automake, libtool, qt5-qmake, qtbase5-dev, libqglviewer-dev-qt5, freeglut3-dev, libglew-dev, libqgcodeeditor-qt5-dev
 Standards-Version: 4.6.0
 Homepage: https://github.com/QGCoder
 Vcs-Git: git://github.com/QGCoder/qgcoder
