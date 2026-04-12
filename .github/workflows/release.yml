@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - ubuntu-24.04
+    runs-on: ${{ matrix.target }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install devscripts
+      run: |
+        sudo cp /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources~
+        sudo sed -Ei 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+        sudo apt update -qq
+        sudo DEBIAN_FRONTEND=noninteractive apt -qq -y install devscripts equivs lintian
+
+    - name: Build libqgcodeeditor package
+      env:
+        DEBFULLNAME: "Jakob Flierl"
+        DEBEMAIL: "jakob.flierl@gmail.com"
+      run: |
+        git clone https://github.com/QGCoder/libqgcodeeditor
+        pushd libqgcodeeditor
+        export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
+        git fetch --unshallow
+        git fetch --tags
+        VERSION="$(git tag -l | tail -n1 | sed -e "s/^v//" -e "s/-/+git/")"
+        DEBEMAIL="${DEBEMAIL}" dch --create \
+            --distribution ${TARGET} \
+            --package libqgcodeeditor \
+            --newversion ${VERSION}~${TARGET}1 \
+            "Automatic release build"
+        dpkg-buildpackage -b -rfakeroot -us -uc
+        mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+        popd
+
+    - name: Install libqgcodeeditor
+      run: |
+        sudo dpkg -i libqgcodeeditor/*.deb
+        sudo apt -y -f install
+
+    - name: Build qgcoder package
+      env:
+        DEBFULLNAME: "Jakob Flierl"
+        DEBEMAIL: "jakob.flierl@gmail.com"
+      run: |
+        export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
+        git fetch --unshallow
+        git fetch --tags
+        VERSION="$(git tag -l | tail -n1 | sed -e "s/^v//" -e "s/-/+git/")"
+        DEBEMAIL="${DEBEMAIL}" dch --create \
+            --distribution ${TARGET} \
+            --package qgcoder \
+            --newversion ${VERSION}~${TARGET}1 \
+            "Automatic release build"
+        mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+        dpkg-buildpackage -b -rfakeroot -us -uc
+
+    - name: Upload artifacts
+      run: |
+        mkdir -p artifacts
+        cp *.buildinfo *.changes *.dsc *.tar.* *.deb artifacts/ 2>/dev/null || true
+        cp ../*.buildinfo ../*.changes ../*.dsc ../*.tar.* ../*.deb artifacts/ 2>/dev/null || true
+        cp libqgcodeeditor/*.buildinfo libqgcodeeditor/*.changes libqgcodeeditor/*.dsc libqgcodeeditor/*.tar.* libqgcodeeditor/*.deb artifacts/ 2>/dev/null || true
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.target }}
+        if-no-files-found: error
+        path: artifacts
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: '*'
+        path: artifacts
+        merge-multiple: true
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
