@@ -4,7 +4,7 @@ An interactive G-code editing GUI.
 
 ## Installation
 
-* First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt5 designer widget plugin for editing G-code.
+* First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt5 / Qt6 designer widget plugin for editing G-code.
 
 * Next: clone, build and run ```qgcoder``` as follows:
 ```bash
