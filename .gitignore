@@ -45,3 +45,4 @@ qgcoder.pro.user
 *.deb
 *.buildinfo
 *.changes
+debian/changelog
