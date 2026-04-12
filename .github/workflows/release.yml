@@ -57,8 +57,6 @@ jobs:
         DEBEMAIL: "jakob.flierl@gmail.com"
       run: |
         export TARGET=$(. /etc/lsb-release && echo $DISTRIB_CODENAME)
-        git fetch --unshallow
-        git fetch --tags
         VERSION="$(git tag -l | tail -n1 | sed -e "s/^v//" -e "s/-/+git/")"
         DEBEMAIL="${DEBEMAIL}" dch --create \
             --distribution ${TARGET} \
