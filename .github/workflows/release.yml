@@ -42,8 +42,8 @@ jobs:
             --package libqgcodeeditor \
             --newversion ${VERSION}~${TARGET}1 \
             "Automatic release build"
-        dpkg-buildpackage -b -rfakeroot -us -uc
         mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+        dpkg-buildpackage -b -rfakeroot -us -uc
         popd
 
     - name: Install libqgcodeeditor
