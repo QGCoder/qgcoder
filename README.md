@@ -21,7 +21,7 @@ sudo dpkg -i ../qgcoder*.deb
 sudo apt -f install
 ```
 
-– Tested with Ubuntu 24.04. - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
+– Tested with Ubuntu 24.04 and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
 
 ## Overview
 
