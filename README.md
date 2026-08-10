@@ -34,11 +34,11 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 
 ## Author
 
-* **Jakob Flierl** - [koppi](https://github.com/koppi)
+* **Jakob Flierl** - [koppi](https://github.com/koppi) - main application (`main.cpp`, `mainwin.*`, `settings_dlg.*`, `view.*`, packaging) - [GPL-2.0](LICENSE)
 
 ## Contributors
 
-* **ArcEye** - [ArcEye](https://github.com/ArcEye)
-* **Mark Pictor**
-* **Kazuyasu Hamada**
-* **Anders Wallin** - [aewallin](https://github.com/aewallin)
+* **ArcEye** (Mick) - [ArcEye](https://github.com/ArcEye) - large file handling, settings dialog and menu wiring in `mainwin.*` / `settings_dlg.*` (2016) - [GPL-2.0](LICENSE)
+* **Mark Pictor** - `g2m` G-code-to-mesh interpreter core (`canonLine`, `canonMotion`, `canonMotionless`, `helicalMotion`, `linearMotion`, `machineStatus`, `nanotimer`, `lex_analyzer`, 2010) - [GPL-2.0-or-later](g2m/canonLine.hpp)
+* **Anders Wallin** - [aewallin](https://github.com/aewallin) - modifications to `g2m/g2m.hpp` / `g2m/g2m.cpp` (2011) - [GPL-2.0-or-later](g2m/g2m.hpp)
+* **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](g2m/g2m.hpp)
