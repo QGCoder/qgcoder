@@ -63,6 +63,9 @@ jobs:
             --package qgcoder \
             --newversion ${VERSION}~${TARGET}1 \
             "Automatic release build"
+        sudo apt-get update -qq
+        sudo dpkg --configure -a
+        sudo apt-get -f install -y
         mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
         dpkg-buildpackage -b -rfakeroot -us -uc
 
