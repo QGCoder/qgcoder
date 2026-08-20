@@ -66,7 +66,9 @@ jobs:
         sudo apt-get update -qq
         sudo dpkg --configure -a
         sudo apt-get -f install -y
-        mk-build-deps -i -s sudo -t "apt --yes --no-install-recommends"
+        mk-build-deps -s sudo -t "apt --yes --no-install-recommends"
+        sudo dpkg -i ../*build-deps*.deb
+        sudo apt-get -f install -y
         dpkg-buildpackage -b -rfakeroot -us -uc
 
     - name: Upload artifacts
