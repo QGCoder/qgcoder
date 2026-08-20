@@ -9,8 +9,9 @@ An interactive G-code editing GUI.
 * Next: clone, build and run ```qgcoder``` as follows:
 ```bash
 gh repo clone QGCoder/qgcoder && cd qgcoder
-qmake && make -j$(nproc)
-./qgcoder
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j$(nproc)
+./build/qgcoder
 ```
 or build and install a Ubuntu / Debian package as follows:
 ```bash

@@ -14,15 +14,12 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
         INSTALL_PROGRAM += -s
 endif
 
-QMAKE_AFTER = -after \
-	      'QMAKE_CXXFLAGS_RELEASE = $(CXXFLAGS)' \
-	      'QMAKE_POST_LINK ~= s/strip/:'
-
 build: build-stamp
 build-stamp: $(QUILT_STAMPFN)
 	dh_testdir
 
-	qmake $(QMAKE_AFTER) qgcoder.pro && $(MAKE)
+	cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build -j$(shell nproc)
 
 	touch $@
 
@@ -34,7 +31,7 @@ clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
-	[ ! -f Makefile ] || $(MAKE) clean
+	rm -rf build
 	dh_clean
 
 install: build
@@ -43,16 +40,7 @@ install: build
 	dh_prep
 	dh_installdirs
 
-	$(MAKE) INSTALL_ROOT=$(CURDIR)/debian/qgcoder install
-
-#	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/share/applications
-#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/applications/qgcoder.desktop
-
-#	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/share/icons/hicolor/scalable/apps
-#	chmod 664 $(CURDIR)/debian/qgcoder/usr/share/icons/hicolor/scalable/apps/qgcoder.svg
-
-	install -d -v -m 0755 $(CURDIR)/debian/qgcoder/usr/bin
-	install -m 755 -p qgcoder $(CURDIR)/debian/qgcoder/usr/bin/qgcoder
+	cmake --install build --prefix $(CURDIR)/debian/qgcoder/usr
 
 # Build architecture-independent files here.
 binary-indep: build install
