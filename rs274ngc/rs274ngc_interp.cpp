@@ -85,6 +85,12 @@ const DefaultTool kDefaultTools[] = {
     { 2, 2, 0.0, 0.250 },
 };
 
+/// Clears _outfile on the way out, so the canon layer is never left pointing at
+/// a stream that has been closed - every early return below relies on it.
+struct OutfileReset {
+    ~OutfileReset() { _outfile = NULL; }
+};
+
 /// \brief Forces LC_NUMERIC to "C" for as long as it is alive.
 ///
 /// The interpreter reads and prints every coordinate with strtod()/fprintf(),
@@ -94,6 +100,33 @@ const DefaultTool kDefaultTools[] = {
 /// coordinate in the g-code would be silently truncated. uselocale() changes
 /// only this thread, so the interpreter can run on a worker without disturbing
 /// the number formatting the GUI thread is using.
+#ifdef _WIN32
+class CNumericLocale {
+public:
+    CNumericLocale() : threadMode(-1)
+    {
+        // Windows has no uselocale(); _configthreadlocale() is what makes
+        // setlocale() apply to the calling thread alone.
+        threadMode = _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
+        const char *current = setlocale(LC_NUMERIC, NULL);
+        if (current != NULL)
+            previous = current;
+        setlocale(LC_NUMERIC, "C");
+    }
+    ~CNumericLocale()
+    {
+        if (!previous.empty())
+            setlocale(LC_NUMERIC, previous.c_str());
+        if (threadMode != -1)
+            _configthreadlocale(threadMode);
+    }
+private:
+    CNumericLocale(const CNumericLocale &);
+    CNumericLocale &operator=(const CNumericLocale &);
+    std::string previous;
+    int threadMode;
+};
+#else
 class CNumericLocale {
 public:
     CNumericLocale() : applied((locale_t)0), previous((locale_t)0)
@@ -114,6 +147,117 @@ private:
     CNumericLocale &operator=(const CNumericLocale &);
     locale_t applied;
     locale_t previous;
+};
+#endif
+
+/// \brief The stream the canon layer prints through, readable as it grows.
+///
+/// open_memstream() is exactly this - a FILE* whose backing buffer always
+/// holds everything written so far - but it is POSIX and Windows has no
+/// equivalent. There the same shape comes from a temporary file read back as
+/// it grows, which costs nothing that matters: even a large program's
+/// canonical output is small, and it never outlives the run. tmpfile() would
+/// have been shorter, but on Windows it wants to create its file in the root
+/// of the current drive, which an unprivileged process may not do.
+class CanonOutput {
+public:
+    CanonOutput() : m_file(NULL)
+#ifdef _WIN32
+        , m_read(0)
+#else
+        , m_buffer(NULL), m_length(0)
+#endif
+    {}
+    ~CanonOutput() { close(); }
+
+    bool open()
+    {
+#ifdef _WIN32
+        char *name = _tempnam(NULL, "qgcoder-");
+        if (name == NULL)
+            return false;
+        m_path = name;
+        free(name);
+        m_file = fopen(m_path.c_str(), "wb+");
+#else
+        m_file = open_memstream(&m_buffer, &m_length);
+#endif
+        return m_file != NULL;
+    }
+
+    FILE *file() const { return m_file; }
+
+    /// push out what the interpreter has written, so data() and size() cover it
+    void sync()
+    {
+        if (m_file == NULL)
+            return;
+        fflush(m_file);
+#ifdef _WIN32
+        // fflush() leaves the position at the end of what has been written,
+        // which is also where the bytes we have not read yet stop.
+        const long end = ftell(m_file);
+        if (end < 0 || (size_t)end <= m_read)
+            return;
+        m_text.resize((size_t)end);
+        // C requires a seek between reading and writing the same stream, which
+        // the two fseek() calls around the read take care of.
+        fseek(m_file, (long)m_read, SEEK_SET);
+        m_read += fread(&m_text[m_read], 1, (size_t)end - m_read, m_file);
+        m_text.resize(m_read);
+        fseek(m_file, 0, SEEK_END);
+#endif
+    }
+
+    const char *data() const
+    {
+#ifdef _WIN32
+        return m_text.c_str();
+#else
+        return m_buffer;
+#endif
+    }
+
+    size_t size() const
+    {
+#ifdef _WIN32
+        return m_text.size();
+#else
+        return m_length;
+#endif
+    }
+
+    void close()
+    {
+        if (m_file != NULL) {
+            fclose(m_file);
+            m_file = NULL;
+        }
+#ifdef _WIN32
+        if (!m_path.empty()) {
+            remove(m_path.c_str());
+            m_path.clear();
+        }
+#else
+        free(m_buffer);
+        m_buffer = NULL;
+        m_length = 0;
+#endif
+    }
+
+private:
+    CanonOutput(const CanonOutput &);
+    CanonOutput &operator=(const CanonOutput &);
+
+    FILE *m_file;
+#ifdef _WIN32
+    std::string m_path;
+    std::string m_text;
+    size_t m_read;
+#else
+    char *m_buffer;
+    size_t m_length;
+#endif
 };
 
 std::string errorTextFor(int errorCode)
@@ -348,25 +492,21 @@ Result Interpreter::interpretFile(const std::string &ngcFile,
         return result;
     }
 
-    // The canon layer prints through _outfile. An in-memory stream lets us pick
-    // complete lines out of it as they appear, which is what reading the
-    // interpreter's stdout used to do.
-    char *buffer = NULL;
-    size_t length = 0;
-    FILE *stream = open_memstream(&buffer, &length);
-    if (stream == NULL) {
+    // The canon layer prints through _outfile. A stream we can read back as it
+    // fills lets us pick complete lines out of it as they appear, which is what
+    // reading the interpreter's stdout used to do.
+    CanonOutput out;
+    if (!out.open()) {
         result.error = "Cannot open the interpreter output stream";
         return result;
     }
-    _outfile = stream;
+    _outfile = out.file();
+    OutfileReset outfileReset;
 
     size_t consumed = 0;
     int status = rs274ngc_init();
     if (status != RS274NGC_OK) {
         result.error = errorTextFor(status);
-        fclose(stream);
-        free(buffer);
-        _outfile = NULL;
         return result;
     }
 
@@ -374,9 +514,6 @@ Result Interpreter::interpretFile(const std::string &ngcFile,
     if (status != RS274NGC_OK) {
         result.error = errorTextFor(status);
         rs274ngc_exit();
-        fclose(stream);
-        free(buffer);
-        _outfile = NULL;
         return result;
     }
 
@@ -399,8 +536,8 @@ Result Interpreter::interpretFile(const std::string &ngcFile,
         }
 
         status = rs274ngc_execute();
-        fflush(stream);
-        result.canonLines += drain(buffer, length, &consumed, onLine);
+        out.sync();
+        result.canonLines += drain(out.data(), out.size(), &consumed, onLine);
 
         if (status == RS274NGC_EXIT) {
             result.reachedEnd = true;
@@ -416,14 +553,10 @@ Result Interpreter::interpretFile(const std::string &ngcFile,
     rs274ngc_close();
     rs274ngc_exit();                              /* saves the parameters */
 
-    fflush(stream);
-    result.canonLines += drain(buffer, length, &consumed, onLine);
-    if (consumed < length)                        // a final line with no newline
-        onLine(std::string(buffer + consumed, length - consumed));
-
-    fclose(stream);
-    free(buffer);
-    _outfile = NULL;
+    out.sync();
+    result.canonLines += drain(out.data(), out.size(), &consumed, onLine);
+    if (consumed < out.size())                    // a final line with no newline
+        onLine(std::string(out.data() + consumed, out.size() - consumed));
 
     result.ok = !failed;
     return result;
