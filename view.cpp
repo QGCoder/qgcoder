@@ -727,13 +727,30 @@ void View::mouseDoubleClickEvent(QMouseEvent *e)
 
 void View::wheelEvent(QWheelEvent *e)
 {
+    // Trackpads and Apple's mice deliver smooth pixel deltas; a conventional
+    // notched wheel delivers multiples of 120 in angle delta. macOS reports a
+    // notched wheel as +/-1 with no pixel delta, so the 120 normalisation below
+    // would leave a whole wheel notch virtually untoothed.
+    const QPoint pixel = e->pixelDelta();
     const QPoint angle = e->angleDelta();
-    if (!angle.isNull()) {
-        zoom(static_cast<float>(angle.y()) / 120.0f);
-        e->accept();
+    float steps = 0.0f;
+    if (!pixel.isNull()) {
+        // same pixel sensitivity as the middle-button drag zoom
+        steps = static_cast<float>(pixel.y()) * 0.05f;
+    } else if (!angle.isNull()) {
+        steps = static_cast<float>(angle.y()) / 120.0f;
+#ifdef Q_OS_MACOS
+        if (std::abs(angle.y()) < 120)
+            steps = static_cast<float>(angle.y());
+#endif
+    }
+
+    if (steps == 0.0f) {
+        QWidget::wheelEvent(e);
         return;
     }
-    QWidget::wheelEvent(e);
+    zoom(steps);
+    e->accept();
 }
 
 void View::keyPressEvent(QKeyEvent *e)

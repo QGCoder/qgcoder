@@ -1,6 +1,12 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/qgcoder.png</file>
+        <file>icons/application-exit.svg</file>
+        <file>icons/document-open.svg</file>
+        <file>icons/document-save.svg</file>
+        <file>icons/document-save-as.svg</file>
+        <file>icons/view-fullscreen.svg</file>
+        <file>icons/zoom-fit-best.svg</file>
         <file>doc/demo.ngc</file>
     </qresource>
 </RCC>

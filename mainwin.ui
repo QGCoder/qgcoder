@@ -237,8 +237,8 @@
   </widget>
   <action name="action_Quit">
    <property name="icon">
-    <iconset theme="application-exit">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/application-exit.svg</normaloff>:/icons/application-exit.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -258,8 +258,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="view-fullscreen">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/view-fullscreen.svg</normaloff>:/icons/view-fullscreen.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Fullscreen</string>
@@ -284,8 +284,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="zoom-fit-best">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/zoom-fit-best.svg</normaloff>:/icons/zoom-fit-best.svg</iconset>
    </property>
    <property name="text">
     <string>Auto zoom (fit best)</string>
@@ -314,8 +314,8 @@
   </action>
   <action name="action_Open">
    <property name="icon">
-    <iconset theme="document-open">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/document-open.svg</normaloff>:/icons/document-open.svg</iconset>
    </property>
    <property name="text">
     <string>Open G-code file...</string>
@@ -337,8 +337,8 @@
   </action>
   <action name="action_Save_As">
    <property name="icon">
-    <iconset theme="document-save-as">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/document-save-as.svg</normaloff>:/icons/document-save-as.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Save &amp;As...</string>
@@ -352,8 +352,8 @@
   </action>
   <action name="action_Save">
    <property name="icon">
-    <iconset theme="document-save">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="res.qrc">
+     <normaloff>:/icons/document-save.svg</normaloff>:/icons/document-save.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Save</string>
