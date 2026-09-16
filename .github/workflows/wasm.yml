@@ -1,0 +1,149 @@
+name: wasm
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# gh-pages is a single branch, so let one deployment finish before the next
+# starts rather than having two pushes race each other for it.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+env:
+  # Each Qt minor release targets one specific Emscripten version, and mixing
+  # them does not work: see "Qt for WebAssembly" in the Qt documentation.
+  QT_VERSION: 6.10.2
+  EMSDK_VERSION: 4.0.7
+
+jobs:
+  build:
+    name: wasm
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # to push the built site to gh-pages
+    steps:
+    - uses: actions/checkout@v7
+
+    # Cross-compiling needs two Qt installations: the wasm one to link
+    # against, and a host one of the same version for moc, uic and rcc, which
+    # have to run on the build machine.
+    - name: Install Qt (host tools)
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: linux
+        target: desktop
+        arch: linux_gcc_64
+        cache: true
+        dir: ${{ runner.temp }}/qt-host
+
+    # Take note of where that landed before the wasm install overwrites
+    # QT_ROOT_DIR with its own: QT_HOST_PATH is how the wasm build is told
+    # which moc, uic and rcc to run, and those have to be the host ones.
+    - name: Remember the host Qt
+      run: echo "QT_HOST_PATH=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+
+    - name: Install Qt (WebAssembly)
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: all_os
+        target: wasm
+        arch: wasm_singlethread
+        cache: true
+        dir: ${{ runner.temp }}/qt-wasm
+
+    - name: Cache the Emscripten SDK
+      id: emsdk-cache
+      uses: actions/cache@v6
+      with:
+        path: emsdk
+        key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}
+
+    - name: Install the Emscripten SDK
+      if: steps.emsdk-cache.outputs.cache-hit != 'true'
+      run: |
+        git clone --depth 1 https://github.com/emscripten-core/emsdk.git
+        ./emsdk/emsdk install "$EMSDK_VERSION"
+
+    # Also on a cache hit: activate is what writes the config the compiler
+    # reads, and it records absolute paths.
+    - name: Activate the Emscripten SDK
+      run: ./emsdk/emsdk activate "$EMSDK_VERSION"
+
+    - name: Build and install libqgcodeeditor
+      run: |
+        source ./emsdk/emsdk_env.sh
+        # No .deb to install from here, so build the editor widget into a
+        # staging prefix. Static, so it ends up inside the .wasm rather than
+        # beside it.
+        git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
+        emcmake cmake -S libqgcodeeditor -B libqgcodeeditor/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="$QT_HOST_PATH" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/qgcodeeditor-prefix" \
+            -DBUILD_STATIC_LIB=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_DESIGNER_PLUGIN=OFF
+        cmake --build libqgcodeeditor/build -j"$(nproc)"
+        cmake --install libqgcodeeditor/build
+
+    - name: Build qgcoder
+      run: |
+        source ./emsdk/emsdk_env.sh
+        # CMAKE_FIND_ROOT_PATH, not CMAKE_PREFIX_PATH: the Emscripten toolchain
+        # sets CMAKE_FIND_ROOT_PATH_MODE_LIBRARY to ONLY, so find_library()
+        # looks under the find roots and nowhere else - a prefix path alone is
+        # searched for packages but not for the library itself.
+        emcmake cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" \
+            -DQT_HOST_PATH="$QT_HOST_PATH" \
+            -DCMAKE_FIND_ROOT_PATH="$PWD/qgcodeeditor-prefix"
+        cmake --build build -j"$(nproc)"
+
+    - name: Assemble the site
+      run: |
+        cmake --install build --prefix "$PWD/dist"
+        mkdir -p site
+        cp dist/bin/qgcoder.html dist/bin/qgcoder.js \
+           dist/bin/qgcoder.wasm dist/bin/qtloader.js dist/bin/qtlogo.svg site/
+        # GitHub Pages serves index.html for a directory, and the Qt shell page
+        # refers to its own files by relative name, so a copy under both names
+        # works either way round.
+        cp site/qgcoder.html site/index.html
+        # without this, Pages runs the directory through Jekyll, which drops
+        # files whose names begin with an underscore
+        touch site/.nojekyll
+        ls -lh site
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: wasm
+        if-no-files-found: error
+        path: site
+
+    # Only what lands on main gets published; a pull request is built to check
+    # that it still compiles and no further.
+    - name: Publish to gh-pages
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      env:
+        GIT_AUTHOR_NAME: Github Actions
+        GIT_AUTHOR_EMAIL: jakob.flierl@gmail.com
+        GIT_COMMITTER_NAME: Github Actions
+        GIT_COMMITTER_EMAIL: jakob.flierl@gmail.com
+      run: |
+        # A fresh orphan commit every time: the site is a build artifact, and
+        # keeping a history of one would mean carrying every .wasm ever built -
+        # about 15 MB apiece - in the repository for good.
+        cd site
+        git init -q -b gh-pages
+        git add -A
+        git commit -q -m "Deploy ${GITHUB_SHA} to gh-pages"
+        git push -q --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            gh-pages

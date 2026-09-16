@@ -11,6 +11,11 @@ qt_standard_project_setup()
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR})
 
+# qt_standard_project_setup() turns on AUTOMOC and AUTOUIC but not AUTORCC, so
+# without this res.qrc is listed as a source below and then quietly ignored -
+# taking the window icon with it.
+set(CMAKE_AUTORCC ON)
+
 # The NIST RS274NGC interpreter, vendored under rs274ngc/ and linked straight
 # into qgcoder - there is no separate "rs274" executable to run any more.
 # The vendored files are 1990s C-with-classes, so they are built on their own
@@ -135,15 +140,16 @@ install(TARGETS qgcoder
 )
 
 # Emscripten: the build produces qgcoder.html, qgcoder.js and qgcoder.wasm, and
-# the page pulls in qtloader.js, which Qt ships next to the platform plugin.
-# Install the four of them side by side so the install prefix is a directory
-# that can be served as-is.
+# the page pulls in qtloader.js and the logo shown while it loads, both of which
+# Qt ships next to the platform plugin. Install the lot side by side so the
+# install prefix is a directory a web server can be pointed straight at.
 if(EMSCRIPTEN)
     install(FILES
         $<TARGET_FILE_DIR:qgcoder>/qgcoder.html
         $<TARGET_FILE_DIR:qgcoder>/qgcoder.js
         $<TARGET_FILE_DIR:qgcoder>/qgcoder.wasm
         $<TARGET_FILE_DIR:qgcoder>/qtloader.js
+        $<TARGET_FILE_DIR:qgcoder>/qtlogo.svg
         DESTINATION bin
     )
 endif()

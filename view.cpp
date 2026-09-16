@@ -2,6 +2,7 @@
 
 #include <QColor>
 #include <QKeyEvent>
+#include <QPainter>
 #include <QMouseEvent>
 #include <QMutexLocker>
 #include <QWheelEvent>
@@ -12,10 +13,10 @@
 
 namespace {
 
-/// The shader bodies are the same for both flavours of GLSL we target; only
-/// the version line and the ES-only precision qualifier differ. Desktop gets
-/// an OpenGL 3.3 core profile, Emscripten gets WebGL 2, which is OpenGL
-/// ES 3.0 and so GLSL ES 3.00.
+#ifndef Q_OS_WASM
+/// Only the version line differs between the two flavours of GLSL that a
+/// desktop OpenGL 3.3 core profile and an OpenGL ES 3.0 context want, so the
+/// shader bodies are shared and the header put on in shaderSource().
 constexpr auto kVertexShaderBody = R"(
 layout(location = 0) in vec3 a_position;
 uniform mat4 u_mvp;
@@ -39,6 +40,7 @@ QByteArray shaderSource(bool isEs, const char *body)
     src += body;
     return src;
 }
+#endif // Q_OS_WASM
 
 const QColor kBackground(0, 0, 60);
 const QColor kTraverseColor(0, 128, 0);
@@ -83,9 +85,17 @@ float niceStep(float span)
 } // namespace
 
 View::View(QWidget *parent)
+#ifdef Q_OS_WASM
+    : QWidget(parent)
+#else
     : QOpenGLWidget(parent)
+#endif
 {
     setFocusPolicy(Qt::StrongFocus);
+#ifdef Q_OS_WASM
+    // paintEvent() fills the whole widget itself
+    setAttribute(Qt::WA_OpaquePaintEvent);
+#endif
 
     m_lines.reserve(20000);
     resetBounds();
@@ -102,6 +112,9 @@ View::~View()
 /// can come first, so the buffers must only ever be destroyed once.
 void View::cleanupGl()
 {
+#ifdef Q_OS_WASM
+    return; // nothing on a GPU to release
+#else
     if (!m_glOwned)
         return;
     m_glOwned = false;
@@ -113,6 +126,7 @@ void View::cleanupGl()
     m_vao.destroy();
     m_program.removeAllShaders();
     doneCurrent();
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -343,6 +357,7 @@ void View::uploadGeometry()
         m_traverseCount = static_cast<int>(m_traverseVerts.size() / 3);
         m_feedCount = static_cast<int>(m_feedVerts.size() / 3);
 
+#ifndef Q_OS_WASM
         m_pathVbo.bind();
         const auto traverseBytes = static_cast<int>(m_traverseVerts.size() * sizeof(float));
         const auto feedBytes = static_cast<int>(m_feedVerts.size() * sizeof(float));
@@ -352,16 +367,19 @@ void View::uploadGeometry()
         if (feedBytes > 0)
             m_pathVbo.write(traverseBytes, m_feedVerts.data(), feedBytes);
         m_pathVbo.release();
+#endif
     }
 
     if (m_decorDirty) {
-        std::vector<float> decor;
-        rebuildDecorations(decor);
+        rebuildDecorations(m_decorVerts);
         m_decorDirty = false;
 
+#ifndef Q_OS_WASM
         m_decorVbo.bind();
-        m_decorVbo.allocate(decor.data(), static_cast<int>(decor.size() * sizeof(float)));
+        m_decorVbo.allocate(m_decorVerts.data(),
+                            static_cast<int>(m_decorVerts.size() * sizeof(float)));
         m_decorVbo.release();
+#endif
     }
 }
 
@@ -451,8 +469,97 @@ void View::zoom(float steps)
 }
 
 // ---------------------------------------------------------------------------
-// OpenGL
+// drawing
 // ---------------------------------------------------------------------------
+
+#ifdef Q_OS_WASM
+
+/// Project one line segment and stroke it, clipping it against the near plane
+/// first: a vertex behind the eye has w <= 0, and dividing by that mirrors it
+/// back into view as a line shooting off across the window.
+void View::drawLines(QPainter &p, const QMatrix4x4 &mvp, const std::vector<float> &verts,
+                     const QColor &color, int first, int count)
+{
+    if (count <= 0)
+        return;
+
+    const auto last = static_cast<std::size_t>(first + count);
+    if (verts.size() < last * 3)
+        return;
+
+    constexpr float kNear = 1e-4f; // a hair in front of the eye
+    const float halfW = static_cast<float>(width()) * 0.5f;
+    const float halfH = static_cast<float>(height()) * 0.5f;
+
+    const auto toWindow = [&](const QVector4D &clip) {
+        const float inv = 1.0f / clip.w();
+        // NDC is y-up, window coordinates are y-down
+        return QPointF(halfW + clip.x() * inv * halfW, halfH - clip.y() * inv * halfH);
+    };
+
+    p.setPen(QPen(color, p.pen().widthF()));
+
+    QList<QLineF> segments;
+    segments.reserve(count / 2);
+
+    for (std::size_t i = static_cast<std::size_t>(first); i + 1 < last; i += 2) {
+        QVector4D a = mvp * QVector4D(verts[i * 3], verts[i * 3 + 1], verts[i * 3 + 2], 1.0f);
+        QVector4D b = mvp * QVector4D(verts[i * 3 + 3], verts[i * 3 + 4], verts[i * 3 + 5], 1.0f);
+
+        if (a.w() < kNear && b.w() < kNear)
+            continue; // wholly behind the eye
+        if (a.w() < kNear || b.w() < kNear) {
+            // clip the end that is behind to where the segment crosses the plane
+            const float t = (kNear - a.w()) / (b.w() - a.w());
+            const QVector4D cut = a + (b - a) * t;
+            (a.w() < kNear ? a : b) = cut;
+        }
+
+        segments.append(QLineF(toWindow(a), toWindow(b)));
+    }
+
+    p.drawLines(segments);
+}
+
+void View::paintEvent(QPaintEvent *)
+{
+    uploadGeometry();
+
+    QPainter p(this);
+    p.fillRect(rect(), kBackground);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    const QMatrix4x4 mvp = projectionMatrix() * viewMatrix();
+    const QMutexLocker locker(&m_mutex);
+
+    p.setPen(QPen(kGridColor, 1.0));
+    if (m_drawGrid)
+        drawLines(p, mvp, m_decorVerts, kGridColor, m_gridFirst, m_gridCount);
+    if (m_drawAxis) {
+        drawLines(p, mvp, m_decorVerts, kAxisXColor, m_axisFirst + 0, 2);
+        drawLines(p, mvp, m_decorVerts, kAxisYColor, m_axisFirst + 2, 2);
+        drawLines(p, mvp, m_decorVerts, kAxisZColor, m_axisFirst + 4, 2);
+    }
+    if (m_boundsValid)
+        drawLines(p, mvp, m_decorVerts, kBoxColor, m_boxFirst, 24);
+
+    // There is no depth buffer here, so the tool path simply goes on top of
+    // the decorations - which is the order that reads best anyway.
+    p.setPen(QPen(kTraverseColor, 2.0));
+    drawLines(p, mvp, m_traverseVerts, kTraverseColor, 0, m_traverseCount);
+    drawLines(p, mvp, m_feedVerts, kFeedColor, 0, m_feedCount);
+
+    ++m_fpsFrames;
+    const qint64 elapsed = m_fpsTimer.elapsed();
+    if (elapsed > 500) {
+        m_fps = m_fpsFrames * 1000.0 / static_cast<double>(elapsed);
+        m_fpsFrames = 0;
+        m_fpsTimer.restart();
+        emit fpsChanged(m_fps);
+    }
+}
+
+#else
 
 void View::initializeGL()
 {
@@ -567,6 +674,8 @@ void View::paintGL()
 
 }
 
+#endif // Q_OS_WASM
+
 // ---------------------------------------------------------------------------
 // input
 // ---------------------------------------------------------------------------
@@ -613,7 +722,7 @@ void View::mouseDoubleClickEvent(QMouseEvent *e)
         e->accept();
         return;
     }
-    QOpenGLWidget::mouseDoubleClickEvent(e);
+    QWidget::mouseDoubleClickEvent(e);
 }
 
 void View::wheelEvent(QWheelEvent *e)
@@ -624,7 +733,7 @@ void View::wheelEvent(QWheelEvent *e)
         e->accept();
         return;
     }
-    QOpenGLWidget::wheelEvent(e);
+    QWidget::wheelEvent(e);
 }
 
 void View::keyPressEvent(QKeyEvent *e)
@@ -647,5 +756,5 @@ void View::keyPressEvent(QKeyEvent *e)
         break;
     }
     // anything else belongs to the window's shortcuts
-    QOpenGLWidget::keyPressEvent(e);
+    QWidget::keyPressEvent(e);
 }

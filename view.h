@@ -4,11 +4,15 @@
 #include <QElapsedTimer>
 #include <QMatrix4x4>
 #include <QMutex>
-#include <QOpenGLBuffer>
-#include <QOpenGLExtraFunctions>
-#include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
-#include <QOpenGLWidget>
+#ifdef Q_OS_WASM
+#  include <QWidget>
+#else
+#  include <QOpenGLBuffer>
+#  include <QOpenGLExtraFunctions>
+#  include <QOpenGLShaderProgram>
+#  include <QOpenGLVertexArrayObject>
+#  include <QOpenGLWidget>
+#endif
 #include <QPoint>
 #include <QQuaternion>
 #include <QVector3D>
@@ -16,6 +20,10 @@
 #include <vector>
 
 #include "canonLine.hpp"
+
+QT_BEGIN_NAMESPACE
+class QPainter;
+QT_END_NAMESPACE
 
 /// \brief 3D tool-path view.
 ///
@@ -27,9 +35,20 @@
 ///
 /// QOpenGLExtraFunctions rather than QOpenGLFunctions_3_3_Core: everything
 /// here is in the subset shared by an OpenGL 3.3 core profile and OpenGL
-/// ES 3.0, and only the latter exists under Emscripten, where the context is
-/// a WebGL 2 one.
+/// ES 3.0.
+///
+/// Emscripten is the exception and draws the same geometry with QPainter
+/// instead. QOpenGLWidget does not work in Qt for WebAssembly: the widget
+/// renders into its own WebGL context, and the compositor then has to wrap
+/// that context's texture for the one it composes the window in - which WebGL,
+/// having no context sharing, cannot do. Both contexts are lost the moment it
+/// is tried. There is nothing to accelerate here but coloured line segments,
+/// so projecting them on the CPU costs little.
+#ifdef Q_OS_WASM
+class View : public QWidget
+#else
 class View : public QOpenGLWidget, protected QOpenGLExtraFunctions
+#endif
 {
     Q_OBJECT
     Q_PROPERTY(bool autoZoom READ autoZoom WRITE setAutoZoom RESET unsetAutoZoom NOTIFY autoZoomChanged)
@@ -70,9 +89,13 @@ signals:
     void fpsChanged(double fps);
 
 protected:
+#ifdef Q_OS_WASM
+    void paintEvent(QPaintEvent *e) override;
+#else
     void initializeGL() override;
     void resizeGL(int w, int h) override;
     void paintGL() override;
+#endif
 
     void mousePressEvent(QMouseEvent *e) override;
     void mouseMoveEvent(QMouseEvent *e) override;
@@ -86,7 +109,7 @@ private:
     void cleanupGl();
     /// tessellate the canon lines into m_traverseVerts / m_feedVerts
     void rebuildGeometry();
-    /// push the CPU-side vertex data into the GPU buffers
+    /// bring the vertex data up to date, and on a GPU build push it over
     void uploadGeometry();
     void rebuildDecorations(std::vector<float> &out);
     void resetBounds();
@@ -97,7 +120,13 @@ private:
 
     [[nodiscard]] QMatrix4x4 viewMatrix() const;
     [[nodiscard]] QMatrix4x4 projectionMatrix() const;
+#ifdef Q_OS_WASM
+    /// project a run of vertex pairs and stroke them
+    void drawLines(QPainter &p, const QMatrix4x4 &mvp, const std::vector<float> &verts,
+                   const QColor &color, int first, int count);
+#else
     void drawLines(const QMatrix4x4 &mvp, const QColor &color, int first, int count);
+#endif
 
     void orbit(QPointF delta);
     void pan(QPointF delta);
@@ -115,13 +144,18 @@ private:
     QVector3D m_boundsMax;
     bool m_boundsValid = false;
 
+    /// the grid, axes and bounding box, in the same xyz-triple form
+    std::vector<float> m_decorVerts;
+
     // --- GPU resources ---------------------------------------------------
+#ifndef Q_OS_WASM
     QOpenGLShaderProgram m_program;
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_pathVbo{QOpenGLBuffer::VertexBuffer};
     QOpenGLBuffer m_decorVbo{QOpenGLBuffer::VertexBuffer};
     int m_mvpLoc = -1;
     int m_colorLoc = -1;
+#endif
     int m_traverseCount = 0; ///< vertices, offset 0 of m_pathVbo
     int m_feedCount = 0;     ///< vertices, right after the traverse ones
     int m_gridFirst = 0;

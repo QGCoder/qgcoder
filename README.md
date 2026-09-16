@@ -2,6 +2,9 @@
 
 An interactive G-code editing GUI.
 
+**[Try it in a browser](https://qgcoder.github.io/qgcoder/)** — the WebAssembly
+build, deployed to GitHub Pages from `main` by CI.
+
 ## Installation
 
 ```qgcoder``` needs [libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor),
@@ -43,12 +46,17 @@ that one pane does nothing useful there; the editor and the 3D view are fine.
 
 ### In a browser (WebAssembly)
 
-With [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
-activated and a Qt for WebAssembly install to hand, build both libraries with
-```qt-cmake```, which supplies the Emscripten toolchain file:
+Every push to `main` is built and deployed by
+[the wasm workflow](.github/workflows/wasm.yml), so there is normally no reason
+to build this yourself. To do it anyway: each Qt minor release targets one
+specific Emscripten version — 6.10 wants 4.0.7, and the pairing for any other
+release is named on Qt's *Qt for WebAssembly* documentation page — so activate
+[emsdk](https://emscripten.org/docs/getting_started/downloads.html) at that
+version, then build both libraries with ```qt-cmake```, which supplies the
+Emscripten toolchain file:
 
 ```bash
-QT_WASM=~/Qt/6.8.3/wasm_singlethread   # wherever Qt for WebAssembly lives
+QT_WASM=~/Qt/6.10.2/wasm_singlethread  # wherever Qt for WebAssembly lives
 PREFIX=$PWD/prefix                     # where libqgcodeeditor lands
 
 git clone https://github.com/QGCoder/libqgcodeeditor
@@ -59,22 +67,28 @@ cmake --build libqgcodeeditor/build && cmake --install libqgcodeeditor/build
 
 gh repo clone QGCoder/qgcoder && cd qgcoder
 $QT_WASM/bin/qt-cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_PREFIX_PATH=$PREFIX
+    -DCMAKE_FIND_ROOT_PATH=$PREFIX
 cmake --build build-wasm
 cmake --install build-wasm --prefix $PWD/site
 ```
 
+```CMAKE_FIND_ROOT_PATH``` rather than the usual ```CMAKE_PREFIX_PATH```: the
+Emscripten toolchain sets ```CMAKE_FIND_ROOT_PATH_MODE_LIBRARY``` to ```ONLY```,
+which confines ```find_library()``` to the find roots, and a prefix path is not
+one of them.
+
 `site/bin` is then a directory a web server can be pointed straight at:
 `qgcoder.html` with the `.js`, the `.wasm` and Qt's loader files beside it.
-The 3D view needs WebGL 2.
+Serve it — `file://` will not do, the browser refuses to fetch the `.wasm`.
 
 A browser has no command line to have named a file on and no file system to
 keep one in, so this build opens the [doc/demo.ngc](doc/demo.ngc) sample
 compiled into the binary and keeps its scratch file in the one Emscripten
 holds in memory. *Open* and *Save As* go through the browser's own file
-dialogs, and the command pane is compiled out.
+dialogs, and the command pane — which shells out to `bash` — is compiled out
+along with the worker thread the desktop builds interpret on.
 
-– Tested with Ubuntu 24.04 LTS and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
+– Tested with Ubuntu 24.04 LTS and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml) [![wasm](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml)
 
 ## Overview
 
@@ -82,8 +96,15 @@ dialogs, and the command pane is compiled out.
 ```libqgcodeeditor-qt6-dev``` to build: the 3D tool-path view is a plain
 ```QOpenGLWidget``` driving one small shader, so libQGLViewer, GLEW and GLUT
 are no longer required. It draws through the subset shared by the OpenGL 3.3
-core profile and OpenGL ES 3.0, which is why the same view also runs on the
-WebGL 2 context a browser hands the WebAssembly build.
+core profile and OpenGL ES 3.0.
+
+The WebAssembly build is the exception and draws the same geometry with
+```QPainter``` instead. ```QOpenGLWidget``` does not work in Qt for
+WebAssembly: the widget renders into a WebGL context of its own, and the
+compositor then has to wrap that context's texture for the one it draws the
+window in — which WebGL, having no context sharing, cannot do, and both
+contexts are lost the moment it is tried. There is nothing to accelerate here
+but coloured line segments, so projecting them on the CPU costs little.
 
 The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
 ```rs274``` executable to install or point at. See [rs274ngc/README.md](rs274ngc/README.md).

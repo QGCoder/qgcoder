@@ -50,26 +50,23 @@ int main(int argc, char **argv)
 
     const bool guiLess = wantsGuiLess(argc, argv);
 
+    // Not under Emscripten: there the 3D view draws with QPainter and asks for
+    // no context of its own, and overriding the default format only gets in
+    // the way of the one Qt composes the window with.
+#ifndef Q_OS_WASM
     if (!guiLess) {
-        // the 3D view needs shaders and vertex array objects; this has to be
-        // set before the QApplication creates the first context
+        // the 3D view needs a core profile; this has to be set before the
+        // QApplication creates the first context
         QSurfaceFormat format;
-        format.setDepthBufferSize(24);
-        format.setStencilBufferSize(0);
-        format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
-#ifdef Q_OS_WASM
-        // the browser gives us WebGL 2, which is OpenGL ES 3.0. Multisampling
-        // is left off: the default framebuffer is the canvas, and asking for
-        // samples there costs a resolve blit per frame for very little.
-        format.setRenderableType(QSurfaceFormat::OpenGLES);
-        format.setVersion(3, 0);
-#else
         format.setVersion(3, 3);
         format.setProfile(QSurfaceFormat::CoreProfile);
+        format.setDepthBufferSize(24);
+        format.setStencilBufferSize(0);
         format.setSamples(4);
-#endif
+        format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
         QSurfaceFormat::setDefaultFormat(format);
     }
+#endif
 
     const std::unique_ptr<QCoreApplication> app{
         guiLess ? new QCoreApplication(argc, argv) : new QApplication(argc, argv)};
