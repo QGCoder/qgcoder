@@ -18,7 +18,7 @@ jobs:
           - ubuntu-24.04
     runs-on: ${{ matrix.target }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install devscripts
       run: |
@@ -51,7 +51,7 @@ jobs:
         # dpkg-buildpackage writes the real packages to the parent of the
         # source dir, i.e. the workspace root. The only .deb left inside
         # libqgcodeeditor/ is the mk-build-deps metapackage, so globbing there
-        # installed that instead and left libqgcodeeditor-qt5-dev missing,
+        # installed that instead and left libqgcodeeditor-qt6-dev missing,
         # which made qgcoder's build-deps unsatisfiable.
         sudo dpkg -i libqgcodeeditor*.deb
         sudo apt -y -f install
@@ -81,7 +81,7 @@ jobs:
         cp ../*.buildinfo ../*.changes ../*.dsc ../*.tar.* ../*.deb artifacts/ 2>/dev/null || true
         cp libqgcodeeditor/*.buildinfo libqgcodeeditor/*.changes libqgcodeeditor/*.dsc libqgcodeeditor/*.tar.* libqgcodeeditor/*.deb artifacts/ 2>/dev/null || true
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.target }}
         if-no-files-found: error
@@ -94,14 +94,14 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         pattern: '*'
         path: artifacts
         merge-multiple: true
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         files: artifacts/*
         generate_release_notes: true
