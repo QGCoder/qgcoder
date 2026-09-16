@@ -4,7 +4,9 @@
 #include <QCloseEvent>
 #include <QDebug>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QFileDialog>
 #include <QLabel>
 #include <QProcess>
@@ -42,8 +44,10 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
     progressBar->hide();
     statusBar()->addPermanentWidget(progressBar);
 
+#if QT_CONFIG(process)
     commandProcess = new QProcess(this);
     commandProcess->setProcessChannelMode(QProcess::SeparateChannels);
+#endif
 
     createG2mWorker();
     setupConnections();
@@ -54,6 +58,12 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
 
     loadSettings();
     applyFontSize();
+
+#if !QT_CONFIG(process)
+    // the command pane runs a shell pipeline, and there is no shell to run it
+    // in here, so the window is always laid out for viewing a file
+    bFileMode = true;
+#endif
 
     const bool commandMode = !bFileMode;
     ui->dockWidget->setHidden(bFileMode);
@@ -69,7 +79,7 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
 
 MainWindow::~MainWindow()
 {
-    if (g2mThread) {
+    if (g2mThread) { // null where the worker runs in the main thread
         g2mThread->quit();
         g2mThread->wait();
     }
@@ -95,6 +105,7 @@ void MainWindow::setupConnections()
     connect(ui->action_Issues, &QAction::triggered, this, &MainWindow::helpIssues);
     connect(ui->action_Chat, &QAction::triggered, this, &MainWindow::helpChat);
 
+#if QT_CONFIG(process)
     connect(commandProcess, &QProcess::finished, this, [this](int, QProcess::ExitStatus) {
         if (commandPending) {
             runCommand();
@@ -111,15 +122,25 @@ void MainWindow::setupConnections()
             return;
         ui->stderror->setPlainText(commandProcess->errorString());
     });
+#endif
 }
 
 void MainWindow::createG2mWorker()
 {
+#if QT_CONFIG(thread)
     g2mThread = new QThread(this);
     g2mWorker = new g2m::G2mWorker();
     g2mWorker->moveToThread(g2mThread);
 
     connect(g2mThread, &QThread::finished, g2mWorker, &QObject::deleteLater);
+#else
+    // A single-threaded build (Emscripten) has no second thread to move the
+    // worker into, so it lives in the main one. The queued connections below
+    // still do their job - they just come back round the only event loop
+    // there is, which keeps the window painting between the two halves of an
+    // interpreter run even though the run itself now blocks it.
+    g2mWorker = new g2m::G2mWorker(this);
+#endif
 
     connect(this, &MainWindow::setGcodeFile, g2mWorker, &g2m::G2mWorker::setFile, Qt::QueuedConnection);
     connect(this, &MainWindow::setToolTable, g2mWorker, &g2m::G2mWorker::setToolTable, Qt::QueuedConnection);
@@ -136,12 +157,15 @@ void MainWindow::createG2mWorker()
     connect(g2mWorker, &g2m::G2mWorker::signalCanonLines, this, &MainWindow::hideProgressBar);
     connect(g2mWorker, &g2m::G2mWorker::signalError, this,
             [this](const QString &msg) { ui->stderror->setPlainText(msg); });
+
+#if QT_CONFIG(thread)
     connect(g2mThread, &QThread::finished, this, &MainWindow::hideProgressBar);
 
     // Start it here: interpret() and the other worker slots are queued
     // connections, so anything emitted before the thread runs would just sit in
     // its event queue.
     g2mThread->start();
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +221,9 @@ void MainWindow::changedCommand()
 /// make executable and race someone else for.
 void MainWindow::runCommand()
 {
+#if !QT_CONFIG(process)
+    return; // no shell here; the command pane is hidden anyway
+#else
     if (commandProcess->state() != QProcess::NotRunning) {
         // a newer edit supersedes the run in flight
         commandPending = true;
@@ -208,6 +235,7 @@ void MainWindow::runCommand()
     commandProcess->start(u"timeout"_s, {u"1"_s, u"bash"_s, u"-s"_s});
     commandProcess->write(ui->command->toPlainText().toUtf8());
     commandProcess->closeWriteChannel();
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +273,22 @@ void MainWindow::changedGcode()
 
 void MainWindow::loadGCodeFile()
 {
+#ifdef Q_OS_WASM
+    // There is no command line in a browser to have named a file on, so fall
+    // back to the sample compiled into the resources rather than opening on an
+    // empty window. It has to be copied out first: the interpreter reads its
+    // input through stdio, which knows nothing about qrc paths.
+    if (openFile.isEmpty()) {
+        const QString path = QDir::tempPath() + "/demo.ngc"_L1;
+        if (QFile::exists(path) || QFile::copy(u":/doc/demo.ngc"_s, path)) {
+            // a file copied out of the resources is read-only, and the editor
+            // is meant to be able to save over this one
+            QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+            openFile = path;
+        }
+    }
+#endif
+
     if (openFile.isEmpty())
         return;
     if (openInViewer(openFile) == 0)
@@ -253,6 +297,29 @@ void MainWindow::loadGCodeFile()
 
 void MainWindow::onOpenFile()
 {
+#ifdef Q_OS_WASM
+    // The browser hands us the contents rather than a path, and does it
+    // asynchronously - there is no nested event loop to wait in. Drop what
+    // comes back into the virtual file system so the rest of the code below
+    // has the file it expects.
+    QFileDialog::getOpenFileContent(
+        tr("GCode Files (*.ngc *.nc);; All files (*.*)"),
+        [this](const QString &name, const QByteArray &content) {
+            if (name.isEmpty())
+                return;
+            const QString path = QDir::tempPath() + u'/' + QFileInfo(name).fileName();
+            QFile f(path);
+            if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                ui->statusbar->showMessage(tr("Error loading file %1").arg(name), 5000);
+                return;
+            }
+            f.write(content);
+            f.close();
+            if (openInViewer(path) == 0)
+                openInBrowser(path);
+        },
+        this);
+#else
     const QString filename =
         QFileDialog::getOpenFileName(this, tr("Open G-code"), home_dir + "machinekit"_L1,
                                      tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
@@ -260,6 +327,7 @@ void MainWindow::onOpenFile()
         return;
     if (openInViewer(filename) == 0)
         openInBrowser(filename);
+#endif
 }
 
 int MainWindow::openInViewer(const QString &filename)
@@ -314,11 +382,18 @@ void MainWindow::openInBrowser(const QString &filename)
 
 void MainWindow::onSaveAs()
 {
+#ifdef Q_OS_WASM
+    // "Save as" in a browser means handing the bytes to the download machinery
+    // under a suggested name; where they end up is the browser's business.
+    const QString hint = openFile.isEmpty() ? u"untitled.ngc"_s : QFileInfo(openFile).fileName();
+    QFileDialog::saveFileContent(ui->gcode->toPlainText().toUtf8(), hint, this);
+#else
     const QString fileName =
         QFileDialog::getSaveFileName(this, tr("Save G-code (As)"), openFile,
                                      tr("G-code Files (*.ngc *.nc);; All files (*.*)"));
     if (!fileName.isEmpty())
         saveInBrowser(fileName);
+#endif
 }
 
 int MainWindow::saveInBrowser(const QString &filename)
@@ -366,11 +441,20 @@ void MainWindow::loadSettings()
 
     settings.endGroup();
 
+#ifdef Q_OS_WASM
+    // Insisting here the way the desktop build does would mean a nested event
+    // loop, which the browser build has not got. There is nowhere else to put
+    // the scratch file anyway: the file system is the one Emscripten keeps in
+    // memory, so just pick a name in it.
+    if (gcodefile.isEmpty())
+        gcodefile = QDir::tempPath() + "/qgcoder-scratch.ngc"_L1;
+#else
     // without a scratch g-code file we cannot work properly, so insist
     while (gcodefile.isEmpty()) {
         if (onSettings() == 0)
             break;
     }
+#endif
 }
 
 void MainWindow::loadSettingsCommand()
@@ -405,6 +489,18 @@ void MainWindow::saveSettings()
 
 int MainWindow::onSettings()
 {
+#ifdef Q_OS_WASM
+    // exec() would spin a nested event loop; open() shows the dialog and
+    // returns, so the values have to be collected when it is accepted.
+    auto *dlg = new SettingsDialog(this, home_dir);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->setValues(tooltable, gcodefile);
+    connect(dlg, &QDialog::accepted, this, [this, dlg] {
+        tooltable = dlg->tooltable;
+        gcodefile = dlg->gcodefile;
+    });
+    dlg->open();
+#else
     SettingsDialog dlg(this, home_dir);
     dlg.setValues(tooltable, gcodefile);
 
@@ -412,6 +508,7 @@ int MainWindow::onSettings()
         tooltable = dlg.tooltable;
         gcodefile = dlg.gcodefile;
     }
+#endif
 
     return gcodefile.isEmpty() ? 1 : 0;
 }

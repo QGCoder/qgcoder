@@ -98,8 +98,10 @@ private: // data
     QProgressBar *progressBar = nullptr;
     /// render rate of the 3D view, shown in the status bar
     QLabel *fpsLabel = nullptr;
+#if QT_CONFIG(process)
     /// the shell pipeline behind the command pane, run without blocking the GUI
     QProcess *commandProcess = nullptr;
+#endif
     /// a command edit that arrived while the previous one was still running
     bool commandPending = false;
 

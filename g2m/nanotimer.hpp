@@ -1,4 +1,3 @@
-// adapted from http://allmybrain.com/2008/06/10/timing-cc-code-on-linux/
 /**************************************************************************
 *   Copyright (C) 2010 by Mark Pictor                                     *
 *   mpictor@gmail.com                                                     *
@@ -21,8 +20,9 @@
 #ifndef NANOTIMER_HH
 #define NANOTIMER_HH
 
-#include <time.h>
-#include <string>
+#include <chrono>
+
+#include <QString>
 
 namespace g2m {
 
@@ -30,13 +30,13 @@ namespace g2m {
 class nanotimer {
   private:
     /// time-stamp when start() was called
-    timespec begin;
+    std::chrono::steady_clock::time_point begin;
   public:
     nanotimer() {}
     /// start the timer()
     void start();
     /// return nanoseconds since start()
-    long getElapsed();
+    long long getElapsed();
     /// return seconds since start()
     double getElapsedS();
     /// return a QString with seconds, milliseconds, microseconds

@@ -22,6 +22,16 @@ sudo dpkg -i ../qgcoder*.deb
 sudo apt -f install
 ```
 
+On macOS, grab the universal `.dmg` from the
+[releases page](https://github.com/QGCoder/qgcoder/releases) and drag `qgcoder.app`
+into `Applications`. It is only ad-hoc signed, so the first launch needs a
+right-click → *Open*.
+
+Windows builds are made by CI with MinGW-w64: download the `windows-mingw64`
+artifact from the [latest run](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml),
+unpack it and run `bin/qgcoder.exe`. The command pane shells out to `bash`, so
+that part of the UI only works under a Unix-like environment.
+
 – Tested with Ubuntu 24.04 LTS and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
 
 ## Overview

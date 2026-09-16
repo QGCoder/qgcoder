@@ -11,7 +11,6 @@
 #include <fstream>
 
 #include <QString>
-#include <QProcess>
 #include <QObject>
 #include <QtDebug>
 

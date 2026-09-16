@@ -12,7 +12,11 @@
 
 namespace {
 
-constexpr auto kVertexShader = R"(#version 330 core
+/// The shader bodies are the same for both flavours of GLSL we target; only
+/// the version line and the ES-only precision qualifier differ. Desktop gets
+/// an OpenGL 3.3 core profile, Emscripten gets WebGL 2, which is OpenGL
+/// ES 3.0 and so GLSL ES 3.00.
+constexpr auto kVertexShaderBody = R"(
 layout(location = 0) in vec3 a_position;
 uniform mat4 u_mvp;
 void main() {
@@ -20,13 +24,21 @@ void main() {
 }
 )";
 
-constexpr auto kFragmentShader = R"(#version 330 core
+constexpr auto kFragmentShaderBody = R"(
 uniform vec4 u_color;
 out vec4 fragColor;
 void main() {
     fragColor = u_color;
 }
 )";
+
+QByteArray shaderSource(bool isEs, const char *body)
+{
+    QByteArray src = isEs ? QByteArrayLiteral("#version 300 es\nprecision highp float;\n")
+                          : QByteArrayLiteral("#version 330 core\n");
+    src += body;
+    return src;
+}
 
 const QColor kBackground(0, 0, 60);
 const QColor kTraverseColor(0, 128, 0);
@@ -444,16 +456,17 @@ void View::zoom(float steps)
 
 void View::initializeGL()
 {
-    if (!initializeOpenGLFunctions()) {
-        qWarning("View: an OpenGL 3.3 core profile context is required");
-        return;
-    }
+    initializeOpenGLFunctions();
 
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &View::cleanupGl,
             Qt::DirectConnection);
 
-    if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex, kVertexShader)
-        || !m_program.addShaderFromSourceCode(QOpenGLShader::Fragment, kFragmentShader)
+    const bool isEs = context()->isOpenGLES();
+
+    if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                           shaderSource(isEs, kVertexShaderBody))
+        || !m_program.addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                              shaderSource(isEs, kFragmentShaderBody))
         || !m_program.link()) {
         qWarning("View: shader error: %s", qPrintable(m_program.log()));
         return;
@@ -469,7 +482,11 @@ void View::initializeGL()
     m_decorVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_LINE_SMOOTH);
+#ifdef GL_LINE_SMOOTH
+    // desktop GL only: OpenGL ES has no line antialiasing to ask for
+    if (!isEs)
+        glEnable(GL_LINE_SMOOTH);
+#endif
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(kBackground.redF(), kBackground.greenF(), kBackground.blueF(), 1.0f);

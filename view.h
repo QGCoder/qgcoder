@@ -5,7 +5,7 @@
 #include <QMatrix4x4>
 #include <QMutex>
 #include <QOpenGLBuffer>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
@@ -19,12 +19,17 @@
 
 /// \brief 3D tool-path view.
 ///
-/// A self-contained Qt 6 viewer: QOpenGLWidget plus the OpenGL 3.3 core
-/// profile, so there is no dependency on libQGLViewer (which has no Qt 6
-/// build) and none on the fixed-function pipeline it relied on. The tool path
-/// is tessellated once into vertex buffers when it changes rather than on
-/// every frame, and drawn with a single trivial shader.
-class View : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
+/// A self-contained Qt 6 viewer: QOpenGLWidget plus a shader pipeline, so
+/// there is no dependency on libQGLViewer (which has no Qt 6 build) and none
+/// on the fixed-function pipeline it relied on. The tool path is tessellated
+/// once into vertex buffers when it changes rather than on every frame, and
+/// drawn with a single trivial shader.
+///
+/// QOpenGLExtraFunctions rather than QOpenGLFunctions_3_3_Core: everything
+/// here is in the subset shared by an OpenGL 3.3 core profile and OpenGL
+/// ES 3.0, and only the latter exists under Emscripten, where the context is
+/// a WebGL 2 one.
+class View : public QOpenGLWidget, protected QOpenGLExtraFunctions
 {
     Q_OBJECT
     Q_PROPERTY(bool autoZoom READ autoZoom WRITE setAutoZoom RESET unsetAutoZoom NOTIFY autoZoomChanged)

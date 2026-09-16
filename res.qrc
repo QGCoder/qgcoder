@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/qgcoder.png</file>
+        <file>doc/demo.ngc</file>
     </qresource>
 </RCC>

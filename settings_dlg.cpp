@@ -13,8 +13,16 @@ SettingsDialog::SettingsDialog(QWidget *parent, const QString &homedir)
     // build the dialog from ui
     setupUi(this);
 
+#ifdef Q_OS_WASM
+    // Browsing means a nested event loop, and there is nothing to browse: both
+    // paths name files in Emscripten's in-memory file system, so they can only
+    // be typed.
+    pb_browse2->hide();
+    pb_browse3->hide();
+#else
     connect(pb_browse2, &QAbstractButton::clicked, this, &SettingsDialog::onFileBrowse2);
     connect(pb_browse3, &QAbstractButton::clicked, this, &SettingsDialog::onFileBrowse3);
+#endif
     connect(pushButton_2, &QAbstractButton::clicked, this, &SettingsDialog::onAccept);
     connect(pushButton, &QAbstractButton::clicked, this, &QDialog::reject);
 }

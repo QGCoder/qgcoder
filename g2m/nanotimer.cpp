@@ -1,5 +1,3 @@
-// adapted from http://allmybrain.com/2008/06/10/timing-cc-code-on-linux/
-
 /**************************************************************************
 *   Copyright (C) 2010 by Mark Pictor                                     *
 *   mpictor@gmail.com                                                     *
@@ -20,41 +18,26 @@
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 **************************************************************************/
 
-#include <cstdio>
-#include <QString>
-
 #include "nanotimer.hpp"
 
-//clock_gettime requires librt
-//CLOCK_MONOTONIC_RAW requires kernel 2.6.28 and libc6 >> 2.11.2
-//with earlier kernels use CLOCK_MONOTONIC or CLOCK_REALTIME
+// This used to call clock_gettime(CLOCK_MONOTONIC_RAW), which does not exist
+// outside POSIX. std::chrono::steady_clock is the same monotonic clock and
+// compiles everywhere.
 
 namespace g2m {
 
-#ifndef CLOCK_MONOTONIC_RAW
-#define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
-#endif
-
-
-
 void nanotimer::start() {
-  clock_gettime(CLOCK_MONOTONIC_RAW, &begin);
+  begin = std::chrono::steady_clock::now();
 }
 
-long nanotimer::getElapsed(){
-  timespec now,delta;
-  clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-  delta.tv_sec = now.tv_sec - begin.tv_sec;
-  delta.tv_nsec = now.tv_nsec - begin.tv_nsec;
-  return delta.tv_sec*1000000000 + delta.tv_nsec;
+long long nanotimer::getElapsed(){
+  const auto delta = std::chrono::steady_clock::now() - begin;
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(delta).count();
 }
 
 double nanotimer::getElapsedS(){
-  timespec now,delta;
-  clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-  delta.tv_sec = now.tv_sec - begin.tv_sec;
-  delta.tv_nsec = now.tv_nsec - begin.tv_nsec;
-  return delta.tv_sec + delta.tv_nsec/1000000000.0;
+  const auto delta = std::chrono::steady_clock::now() - begin;
+  return std::chrono::duration<double>(delta).count();
 }
 
 QString nanotimer::humanreadable(double s) {
