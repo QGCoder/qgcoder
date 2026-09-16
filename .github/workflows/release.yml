@@ -270,6 +270,22 @@ jobs:
     - name: Check that the binary runs
       run: ./dist/bin/qgcoder.exe --version
 
+    - name: Verify the Qt runtime is complete
+      run: |
+        # --version above never loads the Qt GUI plugins, so make sure the
+        # pieces the installer will ship really are there: the qt.conf that
+        # ties the plugin path to the install prefix, the QPA platform plugin
+        # without which the window will not open, and every Qt/MinGW DLL the
+        # installer packs into bin\.
+        test -f dist/bin/qt.conf
+        test -f dist/share/qt6/plugins/platforms/qwindows.dll
+        for dll in Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll \
+                   Qt6OpenGL.dll Qt6OpenGLWidgets.dll Qt6Network.dll \
+                   libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do
+          test -f "dist/bin/$dll"
+        done
+        echo "Qt runtime complete"
+
     - name: Build the installer
       run: |
         VERSION="${GITHUB_REF_NAME#v}"

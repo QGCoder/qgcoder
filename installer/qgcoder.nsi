@@ -30,8 +30,23 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "English"
 
 Section "Install"
-    SetOutPath "$INSTDIR"
-    File /r "..\dist\*.*"
+    ; The interpreter and the 3D view are pure Qt Widgets/OpenGL, so the whole
+    ; runtime has to come with the installer: this machine may not have Qt.
+    SetOutPath "$INSTDIR\bin"
+    File "..\dist\bin\qgcoder.exe"
+    File "..\dist\bin\qt.conf"
+    ; Every DLL windeployqt laid out next to the exe: the Qt6 runtime
+    ; (Core/Gui/Network/OpenGL/OpenGLWidgets/Widgets) plus the MinGW toolchain
+    ; runtime (libgcc_s_seh, libstdc++, libwinpthread) that windeployqt does
+    ; not know about. They have to stay next to the exe for Qt to find them.
+    File "..\dist\bin\*.dll"
+
+    ; Qt's platform and helper plugins. bin\qt.conf points Qt at this exact
+    ; tree relative to the install prefix, so it must mirror the layout
+    ; windeployqt used - platforms\qwindows.dll is the one without which the
+    ; window will not open at all.
+    SetOutPath "$INSTDIR\share\qt6\plugins"
+    File /r "..\dist\share\qt6\plugins\*.*"
 
     WriteRegStr HKLM "Software\${APPNAME}" "InstallDir" "$INSTDIR"
 
