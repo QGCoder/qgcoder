@@ -95,10 +95,14 @@ jobs:
 
     # The official Qt builds for macOS are universal, so one DMG covers both
     # Apple Silicon and Intel. Homebrew's Qt is single-architecture.
+    #
+    # Not the 6.8 LTS: its FindWrapOpenGL.cmake falls back to "-framework AGL"
+    # when it cannot find AGL, and AGL is gone from the SDK the runner has, so
+    # linking fails outright. Qt dropped AGL in 6.9.3.
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.*'
+        version: '6.10.*'
         host: mac
         target: desktop
         arch: clang_64
