@@ -59,8 +59,8 @@
      <string>&amp;File</string>
     </property>
     <addaction name="action_Open"/>
-    <addaction name="action_Save_As"/>
     <addaction name="action_Save"/>
+    <addaction name="action_Save_As"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
@@ -341,7 +341,7 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>&amp;Save &quot;%1&quot; &amp;As...</string>
+    <string>&amp;Save &amp;As...</string>
    </property>
    <property name="toolTip">
     <string>Save G-code file as..</string>
@@ -356,7 +356,7 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>&amp;Save &quot;%1&quot;</string>
+    <string>&amp;Save</string>
    </property>
    <property name="toolTip">
     <string>Save G-code.</string>

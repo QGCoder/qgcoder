@@ -44,6 +44,7 @@ public slots:
     void hideProgressBar();
 
     void onOpenFile();
+    void onSave();
     void onSaveAs();
     int onSettings();
 
@@ -71,6 +72,7 @@ private: // functions
     void openInBrowser(const QString &filename);
     int saveInBrowser(const QString &filename);
 
+    void updateSaveActions();
     void setupConnections();
     void applyFontSize();
     void createG2mWorker();

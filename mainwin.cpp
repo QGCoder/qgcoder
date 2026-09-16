@@ -58,6 +58,7 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
 
     loadSettings();
     applyFontSize();
+    updateSaveActions();
 
 #if !QT_CONFIG(process)
     // the command pane runs a shell pipeline, and there is no shell to run it
@@ -96,6 +97,7 @@ void MainWindow::setupConnections()
     connect(ui->action_Quit, &QAction::triggered, this, &MainWindow::close);
     connect(ui->action_showFullScreen, &QAction::triggered, this, &MainWindow::toggleFullScreen);
     connect(ui->action_Open, &QAction::triggered, this, &MainWindow::onOpenFile);
+    connect(ui->action_Save, &QAction::triggered, this, &MainWindow::onSave);
     connect(ui->action_Save_As, &QAction::triggered, this, &MainWindow::onSaveAs);
     connect(ui->action_Settings, &QAction::triggered, this, [this] { onSettings(); });
 
@@ -212,6 +214,7 @@ void MainWindow::changedCommand()
 {
     openFile.clear();
     setWindowTitle(u"QGCoder :- "_s);
+    updateSaveActions();
     runCommand();
 }
 
@@ -378,6 +381,27 @@ void MainWindow::openInBrowser(const QString &filename)
     setWindowTitle(u"QGCoder :- "_s + filename);
 
     openFile = filename;
+    updateSaveActions();
+}
+
+/// Save over the file the editor is showing.
+void MainWindow::onSave()
+{
+#ifdef Q_OS_WASM
+    // The file system here is the one Emscripten keeps in memory, so writing
+    // back to the open file would leave the result somewhere the user cannot
+    // get at. Hand it to the browser's download machinery instead.
+    onSaveAs();
+#else
+    // Nothing loaded - the command pane feeds the editor, or this is a fresh
+    // window - so there is no path to write to yet. Ask for one.
+    if (openFile.isEmpty()) {
+        onSaveAs();
+        return;
+    }
+
+    saveInBrowser(openFile);
+#endif
 }
 
 void MainWindow::onSaveAs()
@@ -408,8 +432,29 @@ int MainWindow::saveInBrowser(const QString &filename)
     out << ui->gcode->toPlainText();
     file.close();
 
+    ui->statusbar->showMessage(tr("Saved %1").arg(filename), 5000);
     setWindowTitle(u"QGCoder :- "_s + filename);
+
+    // "Save as" used to leave openFile on the file that had been *opened*, so
+    // the title named one file and the next save wrote to another.
+    openFile = filename;
+    updateSaveActions();
     return 0;
+}
+
+/// Both save actions name the file they would write to, so they have to be
+/// re-labelled whenever that changes.
+void MainWindow::updateSaveActions()
+{
+    if (openFile.isEmpty()) {
+        ui->action_Save->setText(tr("&Save"));
+        ui->action_Save_As->setText(tr("&Save &As..."));
+        return;
+    }
+
+    const QString name = QFileInfo(openFile).fileName();
+    ui->action_Save->setText(tr("&Save \"%1\"").arg(name));
+    ui->action_Save_As->setText(tr("&Save \"%1\" &As...").arg(name));
 }
 
 // ---------------------------------------------------------------------------
