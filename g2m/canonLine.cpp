@@ -50,7 +50,7 @@ int canonLine::getN() {
 \param n this is the token to convert
 \returns token n, converted to double
 */
-double canonLine::tok2d(uint n) {
+double canonLine::tok2d(unsigned int n) {
   if (canonTokens.size() < n+1 ) 
     return NAN;
   char* end;
@@ -64,7 +64,7 @@ double canonLine::tok2d(uint n) {
 \param offset skip this many chars at the beginning of the token
 \returns token n, converted to integer
 */
-int canonLine::tok2i(uint n,uint offset) {
+int canonLine::tok2i(unsigned int n,unsigned int offset) {
   if (canonTokens.size() < n+1 ) 
     return INT_MIN;
   char * end;

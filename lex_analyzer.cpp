@@ -34,7 +34,7 @@ namespace lex_analyzer {
 \param n this is the token to convert
 \returns token n, converted to double
 */
-double LexAnalyzer::token2d(uint n) {
+double LexAnalyzer::token2d(unsigned int n) {
   if (tokens.size() < n+1 )
     return NAN;
   char* end;
