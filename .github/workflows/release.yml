@@ -48,7 +48,12 @@ jobs:
 
     - name: Install libqgcodeeditor
       run: |
-        sudo dpkg -i libqgcodeeditor/*.deb
+        # dpkg-buildpackage writes the real packages to the parent of the
+        # source dir, i.e. the workspace root. The only .deb left inside
+        # libqgcodeeditor/ is the mk-build-deps metapackage, so globbing there
+        # installed that instead and left libqgcodeeditor-qt5-dev missing,
+        # which made qgcoder's build-deps unsatisfiable.
+        sudo dpkg -i libqgcodeeditor*.deb
         sudo apt -y -f install
 
     - name: Build qgcoder package
