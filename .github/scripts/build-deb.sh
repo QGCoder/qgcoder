@@ -69,6 +69,11 @@ DEBEMAIL="${DEBEMAIL}" dch --create \
 dpkg --configure -a || true
 apt-get -qq -y -f install
 mk-build-deps --install --tool "apt-get --yes --no-install-recommends"
+# Debian ships the Qt 6 OpenGL dev files in their own package that qt6-base-dev
+# merely Recommends; mk-build-deps --no-install-recommends does not pull those
+# in, and qgcoder's CMake needs Qt6::OpenGL/OpenGLWidgets. Ubuntu vendors the
+# files inside qt6-base-dev itself, so this only triggers on Debian.
+dpkg -S Qt6OpenGLConfig.cmake >/dev/null 2>&1 || apt-get -qq -y install libqt6opengl6-dev
 dpkg-buildpackage -b -rfakeroot -us -uc
 
 # only the build outputs - the *-build-deps metapackages stay in their source
