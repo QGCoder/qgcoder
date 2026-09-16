@@ -20,7 +20,7 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 #include "g2m.hpp"
 #include "rs274ngc_interp.hpp"
 
-#define APP_VERSION QString("0.1.33")
+#define APP_VERSION QString("0.1.34")
 #define APP_NAME QString("gcoder")
 #define APP_NAME_FULL QString("GCoder")
 #define APP_ORGANIZATION QString("gcoder.koppi.github.com")
