@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(qgcoder VERSION 0.1.38 LANGUAGES CXX C)
+project(qgcoder VERSION 0.1.39 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
