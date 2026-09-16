@@ -87,6 +87,44 @@ jobs:
         if-no-files-found: error
         path: artifacts
 
+  # The GitHub-hosted runners only run Ubuntu, so the other .deb flavours are
+  # built inside the target distribution's own container image, with the
+  # workspace mounted read-write at /build and the packages collected in
+  # artifacts/ for the host to upload. Debian 12-14 are the three Debian
+  # releases still in maintenance as of 2026 (oldstable, stable and testing).
+  build-deb:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: debian-bookworm, image: debian:bookworm }
+          - { name: debian-trixie, image: debian:trixie }
+          - { name: debian-forky, image: debian:forky }
+          - { name: ubuntu-26.04, image: ubuntu:26.04 }
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build the packages
+      env:
+        DEBFULLNAME: "Jakob Flierl"
+        DEBEMAIL: "jakob.flierl@gmail.com"
+      run: |
+        # The target distribution's own packages (qt6-base-dev, debhelper,
+        # ...) are only resolvable inside its container. --rm since the job
+        # else leaves the image's default entrypoint process behind.
+        docker run --rm \
+            -e DEBFULLNAME -e DEBEMAIL \
+            -v "$GITHUB_WORKSPACE":/build -w /build \
+            "${{ matrix.image }}" bash /build/.github/scripts/build-deb.sh
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ matrix.name }}
+        if-no-files-found: error
+        path: artifacts
+
   build-macos:
     name: macos-universal
     # Big Sur (macOS 11) needs Qt 6.7, and linking Qt 6.7 on the newer macOS
@@ -177,7 +215,7 @@ jobs:
 
   release:
     name: Release
-    needs: [build, build-macos]
+    needs: [build, build-deb, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
