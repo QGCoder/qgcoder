@@ -4,9 +4,13 @@ An interactive G-code editing GUI.
 
 ## Installation
 
-* First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt6 designer widget plugin for editing G-code.
+```qgcoder``` needs [libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor),
+a Qt 6 widget for editing G-code. Debian and Ubuntu have a package for it;
+everywhere else it has to be built from source into a prefix that
+```CMAKE_PREFIX_PATH``` then points at, the way the CI workflows do it.
 
-* Next: clone, build and run ```qgcoder``` as follows:
+### Linux
+
 ```bash
 gh repo clone QGCoder/qgcoder && cd qgcoder
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
@@ -22,15 +26,53 @@ sudo dpkg -i ../qgcoder*.deb
 sudo apt -f install
 ```
 
-On macOS, grab the universal `.dmg` from the
-[releases page](https://github.com/QGCoder/qgcoder/releases) and drag `qgcoder.app`
-into `Applications`. It is only ad-hoc signed, so the first launch needs a
-right-click → *Open*.
+### macOS
 
-Windows builds are made by CI with MinGW-w64: download the `windows-mingw64`
-artifact from the [latest run](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml),
+Grab the universal `.dmg` from the
+[releases page](https://github.com/QGCoder/qgcoder/releases) and drag
+`qgcoder.app` into `Applications`. It is only ad-hoc signed — there is no
+Developer ID certificate in CI — so the first launch needs a right-click →
+*Open*.
+
+### Windows
+
+CI builds with MinGW-w64: download the `windows-mingw64` artifact from the
+[latest run](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml),
 unpack it and run `bin/qgcoder.exe`. The command pane shells out to `bash`, so
-that part of the UI only works under a Unix-like environment.
+that one pane does nothing useful there; the editor and the 3D view are fine.
+
+### In a browser (WebAssembly)
+
+With [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
+activated and a Qt for WebAssembly install to hand, build both libraries with
+```qt-cmake```, which supplies the Emscripten toolchain file:
+
+```bash
+QT_WASM=~/Qt/6.8.3/wasm_singlethread   # wherever Qt for WebAssembly lives
+PREFIX=$PWD/prefix                     # where libqgcodeeditor lands
+
+git clone https://github.com/QGCoder/libqgcodeeditor
+$QT_WASM/bin/qt-cmake -S libqgcodeeditor -B libqgcodeeditor/build \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$PREFIX \
+    -DBUILD_STATIC_LIB=ON -DBUILD_EXAMPLES=OFF -DBUILD_DESIGNER_PLUGIN=OFF
+cmake --build libqgcodeeditor/build && cmake --install libqgcodeeditor/build
+
+gh repo clone QGCoder/qgcoder && cd qgcoder
+$QT_WASM/bin/qt-cmake -B build-wasm -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_PREFIX_PATH=$PREFIX
+cmake --build build-wasm
+cmake --install build-wasm --prefix $PWD/site
+```
+
+`site/bin` is then a directory a web server can be pointed straight at:
+`qgcoder.html` with the `.js`, the `.wasm` and Qt's loader files beside it.
+The 3D view needs WebGL 2.
+
+A browser has no command line to have named a file on and no file system to
+keep one in, so this build opens the [doc/demo.ngc](doc/demo.ngc) sample
+compiled into the binary and keeps its scratch file in the one Emscripten
+holds in memory. *Open* and *Save As* go through the browser's own file
+dialogs, and the command pane is compiled out.
 
 – Tested with Ubuntu 24.04 LTS and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml)
 
@@ -38,13 +80,15 @@ that part of the UI only works under a Unix-like environment.
 
 ```qgcoder``` is a Qt 6 application. It needs only ```qt6-base-dev``` and
 ```libqgcodeeditor-qt6-dev``` to build: the 3D tool-path view is a plain
-```QOpenGLWidget``` drawing through the OpenGL 3.3 core profile, so
-libQGLViewer, GLEW and GLUT are no longer required.
+```QOpenGLWidget``` driving one small shader, so libQGLViewer, GLEW and GLUT
+are no longer required. It draws through the subset shared by the OpenGL 3.3
+core profile and OpenGL ES 3.0, which is why the same view also runs on the
+WebGL 2 context a browser hands the WebAssembly build.
 
 The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
 ```rs274``` executable to install or point at. See [rs274ngc/README.md](rs274ngc/README.md).
 
-When started first, you have to provide ```qgcoder``` a scratch G-code filename, and
+When started first, the desktop builds ask for a scratch G-code filename, and
 optionally a tool table (leave it empty to use the built-in default), as seen in the
 following screenshot:
 
