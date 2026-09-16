@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-001.png"/>
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/src/doc/qgcoder-001.png"/>
 
 An interactive G-code editing GUI.
 
@@ -82,7 +82,7 @@ one of them.
 Serve it — `file://` will not do, the browser refuses to fetch the `.wasm`.
 
 A browser has no command line to have named a file on and no file system to
-keep one in, so this build opens the [doc/demo.ngc](doc/demo.ngc) sample
+keep one in, so this build opens the [doc/demo.ngc](src/doc/demo.ngc) sample
 compiled into the binary and keeps its scratch file in the one Emscripten
 holds in memory. *Open* and *Save As* go through the browser's own file
 dialogs, and the command pane — which shells out to `bash` — is compiled out
@@ -107,13 +107,13 @@ contexts are lost the moment it is tried. There is nothing to accelerate here
 but coloured line segments, so projecting them on the CPU costs little.
 
 The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
-```rs274``` executable to install or point at. See [rs274ngc/README.md](rs274ngc/README.md).
+```rs274``` executable to install or point at. See [rs274ngc/README.md](src/rs274ngc/README.md).
 
 When started first, the desktop builds ask for a scratch G-code filename, and
 optionally a tool table (leave it empty to use the built-in default), as seen in the
 following screenshot:
 
-<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-002.png"/>
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/src/doc/qgcoder-002.png"/>
 
 
 In the 3D view, drag with the left mouse button to orbit, with the right button to
@@ -130,7 +130,7 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 ## Contributors
 
 * **ArcEye** (Mick) - [ArcEye](https://github.com/ArcEye) - large file handling, settings dialog and menu wiring in `mainwin.*` / `settings_dlg.*` (2016) - [GPL-2.0](LICENSE)
-* **Mark Pictor** - `g2m` G-code-to-mesh interpreter core (`canonLine`, `canonMotion`, `canonMotionless`, `helicalMotion`, `linearMotion`, `machineStatus`, `nanotimer`, `lex_analyzer`, 2010) - [GPL-2.0-or-later](g2m/canonLine.hpp)
-* **Anders Wallin** - [aewallin](https://github.com/aewallin) - modifications to `g2m/g2m.hpp` / `g2m/g2m.cpp` (2011) - [GPL-2.0-or-later](g2m/g2m.hpp)
-* **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](g2m/g2m.hpp)
-* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in [`rs274ngc/`](rs274ngc/) (2008) - [GPL-3.0-or-later](rs274ngc/LICENSE)
+* **Mark Pictor** - `g2m` G-code-to-mesh interpreter core (`canonLine`, `canonMotion`, `canonMotionless`, `helicalMotion`, `linearMotion`, `machineStatus`, `nanotimer`, `lex_analyzer`, 2010) - [GPL-2.0-or-later](src/g2m/canonLine.hpp)
+* **Anders Wallin** - [aewallin](https://github.com/aewallin) - modifications to `g2m/g2m.hpp` / `g2m/g2m.cpp` (2011) - [GPL-2.0-or-later](src/g2m/g2m.hpp)
+* **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](src/g2m/g2m.hpp)
+* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in [`rs274ngc/`](src/rs274ngc/) (2008) - [GPL-3.0-or-later](src/rs274ngc/LICENSE)

@@ -28,7 +28,7 @@ endif()
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
 qt_standard_project_setup()
 
-set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # qt_standard_project_setup() turns on AUTOMOC and AUTOUIC but not AUTORCC, so
 # without this res.qrc is listed as a source below and then quietly ignored -
@@ -40,9 +40,9 @@ set(CMAKE_AUTORCC ON)
 # The vendored files are 1990s C-with-classes, so they are built on their own
 # with warnings off and without AUTOMOC: none of this is Qt.
 add_library(rs274ngc STATIC
-    rs274ngc/rs274ngc_pre.cc
-    rs274ngc/canon_pre.cc
-    rs274ngc/rs274ngc_interp.cpp
+    src/rs274ngc/rs274ngc_pre.cc
+    src/rs274ngc/canon_pre.cc
+    src/rs274ngc/rs274ngc_interp.cpp
 )
 set_target_properties(rs274ngc PROPERTIES
     AUTOMOC OFF
@@ -50,7 +50,7 @@ set_target_properties(rs274ngc PROPERTIES
     AUTORCC OFF
     POSITION_INDEPENDENT_CODE ON
 )
-target_include_directories(rs274ngc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rs274ngc)
+target_include_directories(rs274ngc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/rs274ngc)
 # only the vendored files get warnings turned off; rs274ngc_interp.cpp is ours
 if(MSVC)
     set(rs274ngc_no_warnings "/w")
@@ -74,28 +74,28 @@ find_path(QGCODEEDITOR_INCLUDE_DIR
 )
 
 qt_add_executable(qgcoder
-    main.cpp
-    mainwin.cpp mainwin.h mainwin.ui
-    view.cpp view.h
-    lex_analyzer.cpp lex_analyzer.hpp
-    settings_dlg.cpp settings_dlg.h settings.ui
-    g2m/canonLine.cpp g2m/canonLine.hpp
-    g2m/canonMotion.cpp g2m/canonMotion.hpp
-    g2m/canonMotionless.cpp g2m/canonMotionless.hpp
-    g2m/g2m.cpp g2m/g2m.hpp
-    g2m/g2mworker.cpp g2m/g2mworker.h
-    g2m/gplayer.hpp
-    g2m/helicalMotion.cpp g2m/helicalMotion.hpp
-    g2m/linearMotion.cpp g2m/linearMotion.hpp
-    g2m/machineStatus.cpp g2m/machineStatus.hpp
-    g2m/nanotimer.cpp g2m/nanotimer.hpp
-    g2m/point.hpp
-    res.qrc
+    src/main.cpp
+    src/mainwin.cpp src/mainwin.h src/mainwin.ui
+    src/view.cpp src/view.h
+    src/lex_analyzer.cpp src/lex_analyzer.hpp
+    src/settings_dlg.cpp src/settings_dlg.h src/settings.ui
+    src/g2m/canonLine.cpp src/g2m/canonLine.hpp
+    src/g2m/canonMotion.cpp src/g2m/canonMotion.hpp
+    src/g2m/canonMotionless.cpp src/g2m/canonMotionless.hpp
+    src/g2m/g2m.cpp src/g2m/g2m.hpp
+    src/g2m/g2mworker.cpp src/g2m/g2mworker.h
+    src/g2m/gplayer.hpp
+    src/g2m/helicalMotion.cpp src/g2m/helicalMotion.hpp
+    src/g2m/linearMotion.cpp src/g2m/linearMotion.hpp
+    src/g2m/machineStatus.cpp src/g2m/machineStatus.hpp
+    src/g2m/nanotimer.cpp src/g2m/nanotimer.hpp
+    src/g2m/point.hpp
+    src/res.qrc
 )
 
 target_include_directories(qgcoder PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/g2m
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/g2m
     ${QGCODEEDITOR_INCLUDE_DIR}
 )
 
@@ -144,9 +144,9 @@ if(APPLE)
     )
     # icons/qgcoder.icns is generated from the PNG by the release workflow; a
     # plain source build just gets the default application icon.
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/icons/qgcoder.icns)
-        target_sources(qgcoder PRIVATE icons/qgcoder.icns)
-        set_source_files_properties(icons/qgcoder.icns PROPERTIES
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/qgcoder.icns)
+        target_sources(qgcoder PRIVATE src/icons/qgcoder.icns)
+        set_source_files_properties(src/icons/qgcoder.icns PROPERTIES
             MACOSX_PACKAGE_LOCATION Resources)
         set_target_properties(qgcoder PROPERTIES
             MACOSX_BUNDLE_ICON_FILE qgcoder.icns)
@@ -176,7 +176,7 @@ endif()
 # the freedesktop entry and icon only mean anything on a freedesktop system
 if(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     install(FILES qgcoder.desktop DESTINATION share/applications)
-    install(FILES icons/qgcoder.png DESTINATION share/icons/hicolor/256x256/apps)
+    install(FILES src/icons/qgcoder.png DESTINATION share/icons/hicolor/256x256/apps)
 endif()
 
 # Windows and macOS have no package manager to pull Qt in, so `cmake --install`
