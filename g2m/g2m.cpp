@@ -25,23 +25,11 @@
 #include <fstream>
 #include <stdlib.h>
 
-#include <QTimer>
-#include <QDebug>
-#include <QStringList>
-#include <QString>
-#include <QTime>
-#include <QCoreApplication>
-#include <QEventLoop>
-#include <QFileDialog>
-#include <QStatusBar>
 #include <QFile>
-#include <QDir>
+#include <QFileInfo>
+#include <QString>
 #include <QTextStream>
-#include <QTemporaryFile>
-#include <QThread>
 
-#include <QDebug>
- 
 #include "g2m.hpp"
 #include "nanotimer.hpp"
 #include "machineStatus.hpp"

@@ -1,37 +1,32 @@
-
 #ifndef SETTINGS_DLG_H
 #define SETTINGS_DLG_H
 
-#include <QtGui>
-#include <QSettings>
-#include <QCoreApplication>
-#include <QFileDialog>
-#include <QDebug>
+#include <QDialog>
+#include <QString>
 
 #include "ui_settings.h"
 
-
-class SettingsDialog  : public QDialog , private Ui_Settings
+class SettingsDialog : public QDialog, private Ui_Settings
 {
     Q_OBJECT
+
 public:
+    SettingsDialog(QWidget *parent, const QString &homedir);
 
-    SettingsDialog(QWidget* parent, QString& homedir);
+    void setValues(const QString &tbl, const QString &gcode);
 
-    void setValues(QString& tbl, QString& gcode);
     QString tooltable;
     QString gcodefile;
 
+private slots:
+    void onFileBrowse2() { onFileBrowse(2); }
+    void onFileBrowse3() { onFileBrowse(3); }
+    void onAccept();
+
 private:
     void onFileBrowse(int buttonNumber);
+
     QString home_dir;
-
-private slots:
-    virtual void onFileBrowse2() {onFileBrowse(2);}
-    virtual void onFileBrowse3() {onFileBrowse(3);}
-
-    virtual void onAccept();
 };
 
-
-#endif
+#endif // SETTINGS_DLG_H

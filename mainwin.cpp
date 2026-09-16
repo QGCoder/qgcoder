@@ -1,29 +1,39 @@
 #include "mainwin.h"
 #include "ui_mainwin.h"
 
-#include <QPushButton>
-#include <QProcess>
-#include <QDesktopServices>
-#include <QFileDialog>
+#include <QCloseEvent>
 #include <QDebug>
+#include <QDesktopServices>
+#include <QFile>
+#include <QFileDialog>
+#include <QLabel>
+#include <QProcess>
 #include <QStandardPaths>
-#include <QProgressBar>
+#include <QStatusBar>
+#include <QTextStream>
+#include <QThread>
+#include <QTimer>
+#include <QUrl>
 
-MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+using namespace Qt::StringLiterals;
+
+MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
+    : QMainWindow(parent)
+    , openFile(fileName)
+    , bFileMode(fileMode)
+    , ui(std::make_unique<Ui::MainWindow>())
 {
-    bFileMode = fileMode;
-
     setAttribute(Qt::WA_QuitOnClose);
 
     ui->setupUi(this);
 
-    settings = new QSettings();
-
     view = new View(this);
-
     setCentralWidget(view);
+
+    fpsLabel = new QLabel(this);
+    fpsLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    fpsLabel->setMinimumWidth(80);
+    statusBar()->addPermanentWidget(fpsLabel);
 
     progressBar = new QProgressBar(this);
     progressBar->setMaximumWidth(120);
@@ -32,35 +42,28 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     progressBar->hide();
     statusBar()->addPermanentWidget(progressBar);
 
+    commandProcess = new QProcess(this);
+    commandProcess->setProcessChannelMode(QProcess::SeparateChannels);
+
     createG2mWorker();
+    setupConnections();
 
-    connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-
-    connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
-    connect(ui->actionZoom_In, SIGNAL(triggered()), this, SLOT(zoomIn()));
-    connect(ui->actionZoom_out, SIGNAL(triggered()), this, SLOT(zoomOut()));
-
-    //connect(ui->command, SIGNAL(keyPressed(QKeyEvent *)), view, SLOT(keyPressEvent(QKeyEvent *)));
-
-    connect(ui->action_Issues, SIGNAL(triggered(bool)), this, SLOT(helpIssues()));
-    connect(ui->action_Chat,   SIGNAL(triggered(bool)), this, SLOT(helpChat()));
-
-    home_dir = QStandardPaths::locate(QStandardPaths::HomeLocation, QString(), QStandardPaths::LocateDirectory);
-    openFile = fileName;
+    home_dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    if (!home_dir.endsWith(u'/'))
+        home_dir += u'/';
 
     loadSettings();
+    applyFontSize();
 
-    setStyle();
+    const bool commandMode = !bFileMode;
+    ui->dockWidget->setHidden(bFileMode);
+    ui->dockWidget_2->setHidden(bFileMode);
 
-    if (bFileMode == false) {
-        connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
-        QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
-        ui->dockWidget->setHidden(false);
-        ui->dockWidget_2->setHidden(false);
+    if (commandMode) {
+        connect(ui->command, &QPlainTextEdit::textChanged, this, &MainWindow::changedCommand);
+        QTimer::singleShot(0, this, &MainWindow::loadSettingsCommand);
     } else {
-        QTimer::singleShot(0, this, SLOT(loadGCodeFile()));
-        ui->dockWidget->setHidden(true);
-        ui->dockWidget_2->setHidden(true);
+        QTimer::singleShot(0, this, &MainWindow::loadGCodeFile);
     }
 }
 
@@ -72,47 +75,68 @@ MainWindow::~MainWindow()
     }
 }
 
-void MainWindow::loadGCodeFile() {
-    if(openFile.length())
-        {
-            if(openInViewer(openFile) == 0) {
-                openInBrowser(openFile);
-            }
-        }
-}
-
-void MainWindow::toggleAutoZoom() {
-    view->setAutoZoom(ui->action_AutoZoom->isChecked());
-}
-
-void MainWindow::showFullScreen()
+void MainWindow::setupConnections()
 {
-    if( ui->action_showFullScreen->isChecked() )
-        showMaximized();
-    else
-        showNormal();
+    connect(ui->gcode, &QPlainTextEdit::textChanged, this, &MainWindow::changedGcode);
+
+    connect(view, &View::fpsChanged, this, [this](double fps) {
+        fpsLabel->setText(tr("%1 fps").arg(fps, 0, 'f', 1));
+    });
+
+    connect(ui->action_Quit, &QAction::triggered, this, &MainWindow::close);
+    connect(ui->action_showFullScreen, &QAction::triggered, this, &MainWindow::toggleFullScreen);
+    connect(ui->action_Open, &QAction::triggered, this, &MainWindow::onOpenFile);
+    connect(ui->action_Save_As, &QAction::triggered, this, &MainWindow::onSaveAs);
+    connect(ui->action_Settings, &QAction::triggered, this, [this] { onSettings(); });
+
+    connect(ui->action_AutoZoom, &QAction::triggered, this, &MainWindow::toggleAutoZoom);
+    connect(ui->actionZoom_In, &QAction::triggered, this, &MainWindow::zoomIn);
+    connect(ui->actionZoom_out, &QAction::triggered, this, &MainWindow::zoomOut);
+    connect(ui->action_Issues, &QAction::triggered, this, &MainWindow::helpIssues);
+    connect(ui->action_Chat, &QAction::triggered, this, &MainWindow::helpChat);
+
+    connect(commandProcess, &QProcess::finished, this, [this](int, QProcess::ExitStatus) {
+        if (commandPending) {
+            runCommand();
+            return;
+        }
+        // setPlainText emits textChanged, which is already wired to
+        // changedGcode() - scheduling an interpreter run here would do it twice.
+        ui->gcode->setPlainText(QString::fromUtf8(commandProcess->readAllStandardOutput()));
+        ui->stderror->setPlainText(QString::fromUtf8(commandProcess->readAllStandardError()));
+    });
+
+    connect(commandProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::Crashed) // that is what the timeout looks like
+            return;
+        ui->stderror->setPlainText(commandProcess->errorString());
+    });
 }
 
-void MainWindow::createG2mWorker() {
+void MainWindow::createG2mWorker()
+{
     g2mThread = new QThread(this);
     g2mWorker = new g2m::G2mWorker();
     g2mWorker->moveToThread(g2mThread);
 
     connect(g2mThread, &QThread::finished, g2mWorker, &QObject::deleteLater);
 
-    connect( this, &MainWindow::setGcodeFile,     g2mWorker, &g2m::G2mWorker::setFile, Qt::QueuedConnection);
-    connect( this, &MainWindow::setToolTable,     g2mWorker, &g2m::G2mWorker::setToolTable, Qt::QueuedConnection);
-    connect( this, &MainWindow::interpret,       g2mWorker, &g2m::G2mWorker::process, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
+    connect(this, &MainWindow::setGcodeFile, g2mWorker, &g2m::G2mWorker::setFile, Qt::QueuedConnection);
+    connect(this, &MainWindow::setToolTable, g2mWorker, &g2m::G2mWorker::setToolTable, Qt::QueuedConnection);
+    connect(this, &MainWindow::interpret, g2mWorker, &g2m::G2mWorker::process,
+            static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
 
-    connect( g2mWorker, &g2m::G2mWorker::signalNCend,               view, &View::update, Qt::QueuedConnection);
-    connect( g2mWorker, &g2m::G2mWorker::signalError,               view, &View::update, Qt::QueuedConnection);
-    connect( g2mWorker, &g2m::G2mWorker::signalCanonLines,          view, &View::setCanonLines, Qt::QueuedConnection);
-    connect( g2mWorker, &g2m::G2mWorker::debugMessage,              this, [](QString msg) { qDebug() << "G2M:" << msg; });
-    connect( g2mWorker, &g2m::G2mWorker::signalNCend,              this, &MainWindow::hideProgressBar);
-    connect( g2mWorker, &g2m::G2mWorker::signalError,              this, &MainWindow::hideProgressBar);
-    connect( g2mWorker, &g2m::G2mWorker::signalCanonLines,         this, &MainWindow::hideProgressBar);
-    connect( g2mWorker, &g2m::G2mWorker::signalError,              this, [this](QString msg) { ui->stderror->setPlainText(msg); });
-    connect( g2mThread, &QThread::finished, this, &MainWindow::hideProgressBar);
+    connect(g2mWorker, &g2m::G2mWorker::signalNCend, view, &View::refresh, Qt::QueuedConnection);
+    connect(g2mWorker, &g2m::G2mWorker::signalError, view, &View::refresh, Qt::QueuedConnection);
+    connect(g2mWorker, &g2m::G2mWorker::signalCanonLines, view, &View::setCanonLines, Qt::QueuedConnection);
+    connect(g2mWorker, &g2m::G2mWorker::debugMessage, this,
+            [](const QString &msg) { qDebug() << "G2M:" << msg; });
+    connect(g2mWorker, &g2m::G2mWorker::signalNCend, this, &MainWindow::hideProgressBar);
+    connect(g2mWorker, &g2m::G2mWorker::signalError, this, &MainWindow::hideProgressBar);
+    connect(g2mWorker, &g2m::G2mWorker::signalCanonLines, this, &MainWindow::hideProgressBar);
+    connect(g2mWorker, &g2m::G2mWorker::signalError, this,
+            [this](const QString &msg) { ui->stderror->setPlainText(msg); });
+    connect(g2mThread, &QThread::finished, this, &MainWindow::hideProgressBar);
 
     // Start it here: interpret() and the other worker slots are queued
     // connections, so anything emitted before the thread runs would just sit in
@@ -120,345 +144,304 @@ void MainWindow::createG2mWorker() {
     g2mThread->start();
 }
 
-void MainWindow::zoomIn() {
-    fontSize += 1;
-    setStyle();
+// ---------------------------------------------------------------------------
+// view
+// ---------------------------------------------------------------------------
+
+void MainWindow::toggleAutoZoom()
+{
+    view->setAutoZoom(ui->action_AutoZoom->isChecked());
 }
 
-void MainWindow::zoomOut() {
-    fontSize -= 1; if (fontSize <1) fontSize = 1;
-    setStyle();
+void MainWindow::toggleFullScreen()
+{
+    if (ui->action_showFullScreen->isChecked())
+        showMaximized();
+    else
+        showNormal();
 }
 
-void MainWindow::setStyle() {
-    setStyleSheet(QString("QWidget { font-size: %1pt; font-family: \"Courier\"; background-color: #00003B; color: #FFA700; font: bold }").arg(fontSize));
+void MainWindow::zoomIn()
+{
+    ++fontSize;
+    applyFontSize();
 }
+
+void MainWindow::zoomOut()
+{
+    fontSize = qMax(1, fontSize - 1);
+    applyFontSize();
+}
+
+void MainWindow::applyFontSize()
+{
+    setStyleSheet(u"QWidget { font-size: %1pt; font-family: \"Courier\"; "
+                  "background-color: #00003B; color: #FFA700; font: bold }"_s
+                      .arg(fontSize));
+}
+
+// ---------------------------------------------------------------------------
+// the command pane
+// ---------------------------------------------------------------------------
 
 void MainWindow::changedCommand()
 {
-QString str;
-
-    openFile = "";
-    // ui->gcode is already connected to changedGcode() in the constructor, and
-    // nothing ever disconnects it. Connecting again here would add one more
-    // connection per keystroke in the command pane, and every one of them means
-    // another full interpreter run on each g-code edit.
-    str = "QGCoder :- ";
-    setWindowTitle(str);
-    parseCommand();
+    openFile.clear();
+    setWindowTitle(u"QGCoder :- "_s);
+    runCommand();
 }
 
-void MainWindow::changedGcode() {
+/// Run the command pane through a shell, asynchronously - a blocking
+/// waitForFinished() here froze the whole window for as long as the pipeline
+/// took. The script goes in on stdin, so there is no temporary file to create,
+/// make executable and race someone else for.
+void MainWindow::runCommand()
+{
+    if (commandProcess->state() != QProcess::NotRunning) {
+        // a newer edit supersedes the run in flight
+        commandPending = true;
+        commandProcess->kill();
+        return;
+    }
 
+    commandPending = false;
+    commandProcess->start(u"timeout"_s, {u"1"_s, u"bash"_s, u"-s"_s});
+    commandProcess->write(ui->command->toPlainText().toUtf8());
+    commandProcess->closeWriteChannel();
+}
+
+// ---------------------------------------------------------------------------
+// the g-code pane
+// ---------------------------------------------------------------------------
+
+void MainWindow::changedGcode()
+{
     // openInBrowser() fires textChanged once per appended line; interpreting on
     // each of those would mean one interpreter run per line of the file.
-    if(bLoading)
+    if (bLoading)
         return;
 
-    if (ui->gcode->toPlainText().isEmpty()) 
-        {
+    if (ui->gcode->toPlainText().isEmpty()) {
         view->clear();
-        ui->stderror->setPlainText("");
+        ui->stderror->clear();
         return;
-        }
+    }
 
     QFile f(gcodefile);
-    if ( f.open( QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text) ) 
-        {
-        QTextStream out(&f);
-        out << ui->gcode->toPlainText();
-        f.close();
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+        return;
 
-        view->clear();
+    QTextStream out(&f);
+    out << ui->gcode->toPlainText();
+    f.close();
 
-        if (!g2mWorker || !g2mThread) {
-            createG2mWorker();
-            g2mThread->start();
-        }
+    view->clear();
 
-        g2mWorker->setToolTable(tooltable);
-        g2mWorker->setFile(gcodefile);
-        showProgressBar();
-        
-        if (g2mThread->isRunning()) {
-            QMetaObject::invokeMethod(g2mWorker, "process", Qt::QueuedConnection);
-        } else {
-            g2mThread->start();
-            QTimer::singleShot(50, this, [this]() {
-                g2mWorker->process();
-            });
-        }
-    }
+    emit setToolTable(tooltable);
+    emit setGcodeFile(gcodefile);
+    showProgressBar();
+    emit interpret();
 }
 
-void MainWindow::appendCanonLine(g2m::canonLine* l) {
-    view->appendCanonLine(l);
-}
-
-void MainWindow::parseCommand() {
-    QTimer::singleShot(0, this, [this]() {
-        QProcess sh;
-        sh.setProcessChannelMode(QProcess::SeparateChannels);
-        
-        QFile f( "/tmp/gcoder.sh" );
-        if ( f.open( QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text) ) {
-            QTextStream out(&f);
-            out << ui->command->toPlainText();
-            f.close();
-        }
-
-        if (!f.setPermissions(QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther)) {
-            qDebug("XXX");
-        }
-
-        sh.start("bash", QStringList() << "-c" << "timeout 1 /tmp/gcoder.sh");
-
-        if (!sh.waitForStarted()) {
-            sh.close();
-            sh.waitForFinished(-1);
-            return;
-        }
-
-        if (!sh.waitForFinished(-1)) {
-        }
-
-        // setPlainText emits textChanged, which is already wired to
-        // changedGcode() - scheduling it again here would interpret twice.
-        ui->gcode->setPlainText(sh.readAllStandardOutput());
-        ui->stderror->setPlainText(sh.readAllStandardError());
-
-        sh.close();
-    });
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void MainWindow::loadSettings() 
+void MainWindow::loadGCodeFile()
 {
-
-    settings->beginGroup("gui");
-
-    restoreGeometry(settings->value("geometry", saveGeometry() ).toByteArray());
-    restoreState(settings->value("state", saveState() ).toByteArray());
-    move(settings->value("pos", pos()).toPoint());
-    resize(settings->value("size", size()).toSize());
-
-    if (settings->value("maximized", isMaximized() ).toBool()) 
-        showMaximized();
-    ui->action_showFullScreen->setChecked(settings->value("maximized", isMaximized() ).toBool());
-    
-    view->setAutoZoom(settings->value("autoZoom", view->autoZoom()).toBool());
-    ui->action_AutoZoom->setChecked(settings->value("autoZoom", view->autoZoom()).toBool());
-
-    fontSize = settings->value("fontsize", 12).toInt();
-
-    tooltable = settings->value("tooltable", "").toString();
-    gcodefile = settings->value("gcodefile", "").toString();
-
-    settings->endGroup();
-        // without a scratch g-code file we cannot work properly, so insist
-    if(gcodefile.isEmpty())
-        {
-        int ret = 1;
-        while(ret)
-            ret = onSettings();
-        }
+    if (openFile.isEmpty())
+        return;
+    if (openInViewer(openFile) == 0)
+        openInBrowser(openFile);
 }
-
-void MainWindow::loadSettingsCommand() {
-    QString command("/bin/echo -en 'Hello, World!' | hf2gcode");
-    settings->beginGroup("gui");
-    ui->command->document()->setPlainText(settings->value("command", command).toString());
-    settings->endGroup();
-}
-
-void MainWindow::saveSettings() {
-  settings->beginGroup("gui");
-
-  settings->setValue("geometry", saveGeometry());
-  settings->setValue("state", saveState());
-  settings->setValue("maximized", isMaximized());
-
-  if ( !isMaximized() ) {
-    settings->setValue("pos", pos());
-    settings->setValue("size", size());
-  }
-
-  settings->setValue("command", ui->command->toPlainText());
-
-  settings->setValue("autoZoom", ui->action_AutoZoom->isChecked());
-  settings->setValue("fontsize", fontSize);
-
-  settings->setValue("tooltable", tooltable);
-  settings->setValue("gcodefile", gcodefile);
-  
-  settings->endGroup();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-void MainWindow::closeEvent(QCloseEvent * event) 
-{
-//  qDebug() << "MainWindow::closeEvent";
-  saveSettings();
-//      ui.viewer->close();
-
-    //  we are leaving it to QMainwindow to decide if to accept
-//  event->accept();
-
-  QMainWindow::closeEvent(event);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MainWindow::onOpenFile()
 {
-QString filename;
-QString path = home_dir + "machinekit";
-
-    filename = QFileDialog::getOpenFileName(this, tr("Open G-code"), path, tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
-    if(filename.length())
-        {
-        if(openInViewer(filename) == 0)
-            openInBrowser(filename);
-        }
+    const QString filename =
+        QFileDialog::getOpenFileName(this, tr("Open G-code"), home_dir + "machinekit"_L1,
+                                     tr("GCode Files (*.ngc *.nc);; All files (*.*)"));
+    if (filename.isEmpty())
+        return;
+    if (openInViewer(filename) == 0)
+        openInBrowser(filename);
 }
 
-int MainWindow::openInViewer(QString filename)
+int MainWindow::openInViewer(const QString &filename)
 {
-QFile fin(filename);
-QFile fout(gcodefile);
-QString str;
+    QFile fin(filename);
+    QFile fout(gcodefile);
 
-    if (fin.open(QFile::ReadOnly | QFile::Text) &&  ( fout.open( QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text) ) )
-        {
-        QTextStream ints(&fin);
-        QTextStream outts(&fout);
-        while(!ints.atEnd())
-            outts <<  ints.readLine() << "\n";
-        fin.close();
-        fout.close();
-
-        view->clear();
-
-        emit setToolTable(tooltable);
-        emit setGcodeFile(gcodefile);
-        showProgressBar();
-        emit interpret();
-
-        return 0;
-        }
-    else 
+    if (!fin.open(QFile::ReadOnly | QFile::Text)
+        || !fout.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
         return -1;
+
+    QTextStream ints(&fin);
+    QTextStream outts(&fout);
+    while (!ints.atEnd())
+        outts << ints.readLine() << '\n';
+    fin.close();
+    fout.close();
+
+    view->clear();
+
+    emit setToolTable(tooltable);
+    emit setGcodeFile(gcodefile);
+    showProgressBar();
+    emit interpret();
+
+    return 0;
 }
 
-void MainWindow::openInBrowser(QString filename)
+void MainWindow::openInBrowser(const QString &filename)
 {
-QFile file(filename);
-QString str;
+    QFile file(filename);
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        ui->statusbar->showMessage(tr("Error loading file %1").arg(filename), 5000);
+        return;
+    }
 
-    if (file.open(QFile::ReadOnly | QFile::Text))
-        {
-        str = "Loading file " + filename;
-        ui->statusbar->showMessage(str, 5000);
+    ui->statusbar->showMessage(tr("Loading file %1").arg(filename), 5000);
 
-        bLoading = true;
-        ui->gcode->clear();
+    bLoading = true;
+    ui->gcode->clear();
 
-        QTextStream ts(&file);
+    QTextStream ts(&file);
+    while (!ts.atEnd())
+        ui->gcode->appendNewPlainText(ts.readLine());
+    bLoading = false;
+    file.close();
 
-        while( !ts.atEnd())
-            {
-            str = ts.readLine();
-            ui->gcode->appendNewPlainText(str);
-            }
-        bLoading = false;
-        file.close();  
+    setWindowTitle(u"QGCoder :- "_s + filename);
 
-        str = "QGCoder :- " +  filename;
-        setWindowTitle(str);
-
-        // ui->gcode->highlightLine(1);
-
-        openFile = filename;
-        }
-    else
-        {
-        str = "Error loading file " + filename ;
-        ui->statusbar->showMessage(str, 5000);
-        }
+    openFile = filename;
 }
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void MainWindow::onSaveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save G-code (As)"), openFile, tr("G-code Files (*.ngc *.nc);; All files (*.*)"));
-    saveInBrowser(fileName);
+    const QString fileName =
+        QFileDialog::getSaveFileName(this, tr("Save G-code (As)"), openFile,
+                                     tr("G-code Files (*.ngc *.nc);; All files (*.*)"));
+    if (!fileName.isEmpty())
+        saveInBrowser(fileName);
 }
 
-
-
-int  MainWindow::saveInBrowser(QString& filename)
+int MainWindow::saveInBrowser(const QString &filename)
 {
-QFile file(filename);
-QString str;
-
-    if (file.open(QIODevice::ReadWrite | QIODevice::Text))
-        {
-        QTextStream out(&file);
-        out << ui->gcode->toPlainText();
-        file.close();
-
-        str = "QGCoder:- " +  filename;
-        setWindowTitle(str);
-        return 0;
-        }
-    else
-        {
-        str = "Error saving file " + filename ;
-        ui->statusbar->showMessage(str, 5000);
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        ui->statusbar->showMessage(tr("Error saving file %1").arg(filename), 5000);
         return -1;
-        }
+    }
+
+    QTextStream out(&file);
+    out << ui->gcode->toPlainText();
+    file.close();
+
+    setWindowTitle(u"QGCoder :- "_s + filename);
+    return 0;
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ---------------------------------------------------------------------------
+// settings
+// ---------------------------------------------------------------------------
+
+void MainWindow::loadSettings()
+{
+    settings.beginGroup(u"gui"_s);
+
+    restoreGeometry(settings.value(u"geometry"_s, saveGeometry()).toByteArray());
+    restoreState(settings.value(u"state"_s, saveState()).toByteArray());
+    move(settings.value(u"pos"_s, pos()).toPoint());
+    resize(settings.value(u"size"_s, size()).toSize());
+
+    const bool maximized = settings.value(u"maximized"_s, isMaximized()).toBool();
+    if (maximized)
+        showMaximized();
+    ui->action_showFullScreen->setChecked(maximized);
+
+    const bool autoZoom = settings.value(u"autoZoom"_s, view->autoZoom()).toBool();
+    view->setAutoZoom(autoZoom);
+    ui->action_AutoZoom->setChecked(autoZoom);
+
+    fontSize = settings.value(u"fontsize"_s, 12).toInt();
+
+    tooltable = settings.value(u"tooltable"_s).toString();
+    gcodefile = settings.value(u"gcodefile"_s).toString();
+
+    settings.endGroup();
+
+    // without a scratch g-code file we cannot work properly, so insist
+    while (gcodefile.isEmpty()) {
+        if (onSettings() == 0)
+            break;
+    }
+}
+
+void MainWindow::loadSettingsCommand()
+{
+    settings.beginGroup(u"gui"_s);
+    ui->command->document()->setPlainText(
+        settings.value(u"command"_s, u"/bin/echo -en 'Hello, World!' | hf2gcode"_s).toString());
+    settings.endGroup();
+}
+
+void MainWindow::saveSettings()
+{
+    settings.beginGroup(u"gui"_s);
+
+    settings.setValue(u"geometry"_s, saveGeometry());
+    settings.setValue(u"state"_s, saveState());
+    settings.setValue(u"maximized"_s, isMaximized());
+
+    if (!isMaximized()) {
+        settings.setValue(u"pos"_s, pos());
+        settings.setValue(u"size"_s, size());
+    }
+
+    settings.setValue(u"command"_s, ui->command->toPlainText());
+    settings.setValue(u"autoZoom"_s, ui->action_AutoZoom->isChecked());
+    settings.setValue(u"fontsize"_s, fontSize);
+    settings.setValue(u"tooltable"_s, tooltable);
+    settings.setValue(u"gcodefile"_s, gcodefile);
+
+    settings.endGroup();
+}
 
 int MainWindow::onSettings()
 {
+    SettingsDialog dlg(this, home_dir);
+    dlg.setValues(tooltable, gcodefile);
 
-    SettingsDialog *dlg = new SettingsDialog(this, home_dir);
+    if (dlg.exec() == QDialog::Accepted) {
+        tooltable = dlg.tooltable;
+        gcodefile = dlg.gcodefile;
+    }
 
-    dlg->setValues(tooltable, gcodefile);
-
-    dlg->exec();
-
-    if(dlg->result())
-        {
-        tooltable = dlg->tooltable;
-        gcodefile = dlg->gcodefile;
-        }
-
-    if(gcodefile.isEmpty())
-        return 1;
-    else
-        return 0;
+    return gcodefile.isEmpty() ? 1 : 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void MainWindow::helpIssues() {
-    QDesktopServices::openUrl(QUrl("https://github.com/QGCoder/qgcoder/issues"));
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    saveSettings();
+    QMainWindow::closeEvent(event);
 }
 
-void MainWindow::helpChat() {
-    QDesktopServices::openUrl(QUrl("https://gitter.im/QGCoder/qgcoder"));
+// ---------------------------------------------------------------------------
+// misc
+// ---------------------------------------------------------------------------
+
+void MainWindow::helpIssues()
+{
+    QDesktopServices::openUrl(QUrl(u"https://github.com/QGCoder/qgcoder/issues"_s));
 }
 
-void MainWindow::showProgressBar() {
+void MainWindow::helpChat()
+{
+    QDesktopServices::openUrl(QUrl(u"https://gitter.im/QGCoder/qgcoder"_s));
+}
+
+void MainWindow::showProgressBar()
+{
     progressBar->show();
 }
 
-void MainWindow::hideProgressBar() {
+void MainWindow::hideProgressBar()
+{
     progressBar->hide();
 }

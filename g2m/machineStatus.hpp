@@ -108,7 +108,7 @@ class machineStatus {
     /// return the current tool index
     int  getTool() const { return myTool; };
     /// return the current spindle status & motion type
-    int  getSpindleMotionStatus() const { return (spindleStat | motionType); }
+    int  getSpindleMotionStatus() const { return static_cast<int>(spindleStat) | static_cast<int>(motionType); }
 
   protected:
     /// machine Pose at start of this move

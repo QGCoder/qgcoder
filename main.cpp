@@ -1,73 +1,83 @@
-#include <QtWidgets>
-#include <QStandardPaths>
+#include <QApplication>
+#include <QCommandLineParser>
 #include <QDir>
-#include <QLoggingCategory>
-#include <QMessageLogContext>
-#include <QString>
-#include <QFile>
-#include <QTextStream>
+#include <QStandardPaths>
+#include <QSurfaceFormat>
 
-void customMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
-    Q_UNUSED(type);
-    Q_UNUSED(context);
-    if (msg.contains("QSocketNotifier"))
-        return;
-    QByteArray ba = msg.toLocal8Bit();
-    fprintf(stderr, "%s\n", ba.constData());
-}
+#include <clocale>
+#include <cstdio>
+#include <memory>
 
+#include "canonLine.hpp"
 #include "mainwin.h"
-#include "g2m.hpp"
 #include "rs274ngc_interp.hpp"
 
-#define APP_VERSION QString("0.1.34")
-#define APP_NAME QString("gcoder")
-#define APP_NAME_FULL QString("GCoder")
-#define APP_ORGANIZATION QString("gcoder.koppi.github.com")
+using namespace Qt::StringLiterals;
 
-int main(int argv, char **args)
+namespace {
+
+constexpr auto kAppVersion = "0.1.35";
+constexpr auto kAppName = "gcoder";
+constexpr auto kAppOrganization = "gcoder.koppi.github.com";
+
+void customMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
-    qRegisterMetaType<QVector<canonLine*>>("QVector<canonLine*>");
+    Q_UNUSED(type)
+    Q_UNUSED(context)
+    if (msg.contains("QSocketNotifier"_L1))
+        return;
+    std::fprintf(stderr, "%s\n", qUtf8Printable(msg));
+}
+
+/// --help and --version must work on a machine with no display, so only build a
+/// QApplication when we are actually going to show a window.
+bool wantsGuiLess(int argc, char **argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        const auto arg = QLatin1StringView(argv[i]);
+        if (arg == "-h"_L1 || arg == "--help"_L1 || arg == "-v"_L1 || arg == "--version"_L1)
+            return true;
+    }
+    return false;
+}
+
+} // namespace
+
+int main(int argc, char **argv)
+{
+    qRegisterMetaType<QVector<g2m::canonLine *>>("QVector<g2m::canonLine*>");
     qInstallMessageHandler(customMessageHandler);
-    QApplication *app;
 
-    // workaround for https://forum.qt.io/topic/53298/qcommandlineparser-to-select-gui-or-non-gui-mode
+    const bool guiLess = wantsGuiLess(argc, argv);
 
-    // On Linux: enable printing of version and help without DISPLAY variable set
-
-    bool runCore = false;
-    for (int i = 0; i < argv; i++) {
-        if (QString(args[i]) == "-h" ||
-                QString(args[i]) == "--help" ||
-                QString(args[i]) == "-v" ||
-                QString(args[i]) == "--version" ) {
-            runCore = true;
-            break;
-        }
+    if (!guiLess) {
+        // the 3D view needs a core profile; this has to be set before the
+        // QApplication creates the first context
+        QSurfaceFormat format;
+        format.setVersion(3, 3);
+        format.setProfile(QSurfaceFormat::CoreProfile);
+        format.setDepthBufferSize(24);
+        format.setStencilBufferSize(0);
+        format.setSamples(4);
+        format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+        QSurfaceFormat::setDefaultFormat(format);
     }
 
-    if (runCore) {
-        app = static_cast<QApplication*>(new QCoreApplication(argv, args));
-    } else {
-        app = new QApplication(argv, args);
-    }
+    const std::unique_ptr<QCoreApplication> app{
+        guiLess ? new QCoreApplication(argc, argv) : new QApplication(argc, argv)};
 
-    // end workaround
+    // the g-code interpreter parses numbers with the C locale
+    std::setlocale(LC_NUMERIC, "C");
 
-    setlocale(LC_NUMERIC,"C");
+    QCoreApplication::setOrganizationName(QString::fromLatin1(kAppOrganization));
+    QCoreApplication::setApplicationName(QString::fromLatin1(kAppName));
+    QCoreApplication::setApplicationVersion(QString::fromLatin1(kAppVersion));
 
-    //XXX app->setStyleSheet("QPlainTextEdit{ selection-background-color: darkblue } QWidget { font-size: 12pt; font-family: \"Courier\"; background-color: #00003B; color: #FFA700; font: bold }");
-
-    QCoreApplication::setOrganizationName(APP_ORGANIZATION);
-    QCoreApplication::setApplicationName(APP_NAME);
-    QCoreApplication::setApplicationVersion(APP_VERSION);
     QCommandLineParser parser;
-
     parser.setApplicationDescription(QCoreApplication::applicationName());
     parser.addHelpOption();
     parser.addVersionOption();
-    parser.addPositionalArgument("file", "The G-code file to open.");
-
+    parser.addPositionalArgument(u"file"_s, u"The G-code file to open."_s);
     parser.process(*app);
 
     // The embedded interpreter keeps its parameter file (rs274ngc.var) next to
@@ -79,19 +89,10 @@ int main(int argv, char **args)
     QDir().mkpath(dataDir);
     rs274ngc::setParameterFileDirectory(dataDir.toStdString());
 
-    MainWindow *win;
+    const QStringList files = parser.positionalArguments();
 
-    if (!parser.positionalArguments().isEmpty()) {
-         win = new MainWindow(NULL, !parser.positionalArguments().isEmpty(), parser.positionalArguments().first());
-    } else {
-        win = new MainWindow();
-    }
+    MainWindow win(nullptr, !files.isEmpty(), files.value(0));
+    win.show();
 
-    win->show();
-
-    int ret = app->exec();
-    delete win;
-    delete app;
-    return ret;
+    return QCoreApplication::exec();
 }
-

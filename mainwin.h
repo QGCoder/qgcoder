@@ -3,14 +3,22 @@
 
 #include <QMainWindow>
 #include <QProgressBar>
-
 #include <QSettings>
+#include <QString>
+
+#include <memory>
 
 #include <QGCodeEditor/QGCodeEditor.h>
 
-#include "view.h"
 #include "g2m/g2mworker.h"
 #include "settings_dlg.h"
+#include "view.h"
+
+QT_BEGIN_NAMESPACE
+class QLabel;
+class QProcess;
+class QThread;
+QT_END_NAMESPACE
 
 namespace Ui {
 class MainWindow;
@@ -21,59 +29,56 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0, bool fileMode = false, QString fileName = "");
-    ~MainWindow();
-
-    void parseGcode();
-    void parseCommand();
-
-signals:
-    void setToolTable(QString s);
-    void setGcodeFile(QString f);
-    void interpret();
+    explicit MainWindow(QWidget *parent = nullptr, bool fileMode = false, const QString &fileName = {});
+    ~MainWindow() override;
 
 public slots:
-    // load the last command string from the settings
-    // used during startup
-    virtual void loadSettingsCommand();
-    virtual void loadGCodeFile();
+    /// load the last command string from the settings; used during startup
+    void loadSettingsCommand();
+    void loadGCodeFile();
 
-    virtual void changedGcode();
-    virtual void changedCommand();
+    void changedGcode();
+    void changedCommand();
 
-    virtual void showProgressBar();
-    virtual void hideProgressBar();
+    void showProgressBar();
+    void hideProgressBar();
 
-    virtual void onOpenFile();
-    virtual void onSaveAs();
-    virtual int onSettings();
+    void onOpenFile();
+    void onSaveAs();
+    int onSettings();
 
-    virtual void appendCanonLine(g2m::canonLine*);
+    void toggleAutoZoom();
+    void toggleFullScreen();
+    void zoomIn();
+    void zoomOut();
 
-    virtual void toggleAutoZoom();
-    virtual void showFullScreen();
-    virtual void zoomIn();
-    virtual void zoomOut();
+    void helpIssues();
+    void helpChat();
 
-    virtual void helpIssues();
-    virtual void helpChat();
+signals:
+    void setToolTable(const QString &s);
+    void setGcodeFile(const QString &f);
+    void interpret();
 
 protected:
+    void closeEvent(QCloseEvent *event) override;
+
+private: // functions
     void loadSettings();
     void saveSettings();
 
-private:  // functions
-    int openInViewer(QString filename);
-    void openInBrowser(QString filename);
-    int saveInBrowser(QString& filename);
+    int openInViewer(const QString &filename);
+    void openInBrowser(const QString &filename);
+    int saveInBrowser(const QString &filename);
 
-    void closeEvent(QCloseEvent *) Q_DECL_OVERRIDE;
-
-    void setStyle();
+    void setupConnections();
+    void applyFontSize();
     void createG2mWorker();
+    void runCommand();
 
 private: // data
-    QString home_dir, openFile;
+    QString home_dir;
+    QString openFile;
     /// started from the command line with a g-code file: lays the window out
     /// for viewing a file rather than driving a command
     bool bFileMode = false;
@@ -83,18 +88,24 @@ private: // data
     QString tooltable;
     QString gcodefile;
 
-    Ui::MainWindow *ui;
+    std::unique_ptr<Ui::MainWindow> ui;
 
-    View *view;
+    View *view = nullptr;
 
-    g2m::G2mWorker *g2mWorker;
-    QThread *g2mThread;
+    g2m::G2mWorker *g2mWorker = nullptr;
+    QThread *g2mThread = nullptr;
 
-    QProgressBar *progressBar;
+    QProgressBar *progressBar = nullptr;
+    /// render rate of the 3D view, shown in the status bar
+    QLabel *fpsLabel = nullptr;
+    /// the shell pipeline behind the command pane, run without blocking the GUI
+    QProcess *commandProcess = nullptr;
+    /// a command edit that arrived while the previous one was still running
+    bool commandPending = false;
 
-    int fontSize;
+    int fontSize = 12;
 
-    QSettings *settings;
+    QSettings settings;
 };
 
 #endif // MAINWINDOW_H

@@ -4,7 +4,7 @@ An interactive G-code editing GUI.
 
 ## Installation
 
-* First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt5 / Qt6 designer widget plugin for editing G-code.
+* First install [https://github.com/QGCoder/libqgcodeeditor](https://github.com/QGCoder/libqgcodeeditor), a Qt6 designer widget plugin for editing G-code.
 
 * Next: clone, build and run ```qgcoder``` as follows:
 ```bash
@@ -26,6 +26,11 @@ sudo apt -f install
 
 ## Overview
 
+```qgcoder``` is a Qt 6 application. It needs only ```qt6-base-dev``` and
+```libqgcodeeditor-qt6-dev``` to build: the 3D tool-path view is a plain
+```QOpenGLWidget``` drawing through the OpenGL 3.3 core profile, so
+libQGLViewer, GLEW and GLUT are no longer required.
+
 The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
 ```rs274``` executable to install or point at. See [rs274ngc/README.md](rs274ngc/README.md).
 
@@ -35,6 +40,11 @@ following screenshot:
 
 <img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-002.png"/>
 
+
+In the 3D view, drag with the left mouse button to orbit, with the right button to
+pan and with the middle button (or the wheel) to zoom. Double-click, ```Home``` or
+```Space``` frames the whole tool path, ```R``` returns to the default viewpoint, and
+```A``` and ```G``` toggle the axes and the grid.
 
 A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside ```qgcoder```.
 

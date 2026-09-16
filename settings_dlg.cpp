@@ -1,52 +1,51 @@
 #include "settings_dlg.h"
+
+#include <QAbstractButton>
 #include <QDir>
+#include <QFileDialog>
 
-SettingsDialog::SettingsDialog(QWidget *parent, QString& homedir)
-:QDialog(parent)
+using namespace Qt::StringLiterals;
+
+SettingsDialog::SettingsDialog(QWidget *parent, const QString &homedir)
+    : QDialog(parent)
+    , home_dir(homedir)
 {
-QString str;
-
     // build the dialog from ui
     setupUi(this);
-    home_dir = homedir;
 
+    connect(pb_browse2, &QAbstractButton::clicked, this, &SettingsDialog::onFileBrowse2);
+    connect(pb_browse3, &QAbstractButton::clicked, this, &SettingsDialog::onFileBrowse3);
+    connect(pushButton_2, &QAbstractButton::clicked, this, &SettingsDialog::onAccept);
+    connect(pushButton, &QAbstractButton::clicked, this, &QDialog::reject);
 }
 
-void SettingsDialog::setValues(QString& tbl, QString& gcode)
+void SettingsDialog::setValues(const QString &tbl, const QString &gcode)
 {
-    le_path2->setText(tooltable = tbl);
-    le_path3->setText(gcodefile = gcode);
+    tooltable = tbl;
+    gcodefile = gcode;
+    le_path2->setText(tooltable);
+    le_path3->setText(gcodefile);
 }
 
 void SettingsDialog::onFileBrowse(int buttonNumber)
 {
-QString pathStr;
-QString filename;
-QDir dir;
+    const QDir dir;
+    QString pathStr;
 
-    if(buttonNumber == 2)
-        {
-        if(tooltable.isEmpty())
-            pathStr = home_dir + "machinekit/configs";
-        else
-            pathStr = dir.absoluteFilePath(tooltable);
-        }
+    if (buttonNumber == 2)
+        pathStr = tooltable.isEmpty() ? home_dir + "machinekit/configs"_L1 : dir.absoluteFilePath(tooltable);
     else
-        {
-        if(gcodefile.isEmpty())
-            pathStr = "/tmp";
-        else
-            pathStr = dir.absoluteFilePath(gcodefile);
-        }
+        pathStr = gcodefile.isEmpty() ? QDir::tempPath() : dir.absoluteFilePath(gcodefile);
 
-    filename = QFileDialog::getOpenFileName(this, tr("Settings Paths"), pathStr, tr("All files (*)"));
-    if(filename.length())
-        {
-        if(buttonNumber == 2)
-            le_path2->setText(filename);
-        else
-            le_path3->setText(filename);
-        }
+    const QString filename =
+        QFileDialog::getOpenFileName(this, tr("Settings Paths"), pathStr, tr("All files (*)"));
+    if (filename.isEmpty())
+        return;
+
+    if (buttonNumber == 2)
+        le_path2->setText(filename);
+    else
+        le_path3->setText(filename);
 }
 
 void SettingsDialog::onAccept()
@@ -56,7 +55,3 @@ void SettingsDialog::onAccept()
 
     QDialog::accept();
 }
-
-
-
-
