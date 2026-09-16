@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/src/doc/qgcoder-001.png"/>
+<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/main/src/doc/qgcoder-001.png"/>
 
 An interactive G-code editing GUI.
 
@@ -39,10 +39,12 @@ Developer ID certificate in CI — so the first launch needs a right-click →
 
 ### Windows
 
-CI builds with MinGW-w64: download the `windows-mingw64` artifact from the
-[latest run](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml),
-unpack it and run `bin/qgcoder.exe`. The command pane shells out to `bash`, so
-that one pane does nothing useful there; the editor and the 3D view are fine.
+Grab the `qgcoder-<version>-windows-installer.exe` from the
+[releases page](https://github.com/QGCoder/qgcoder/releases). It is built with
+MinGW-w64 and ships the whole Qt 6 runtime it links against, so there is
+nothing else to install on the target machine. The command pane shells out to
+`bash`, so that one pane does nothing useful there; the editor and the 3D view
+are fine.
 
 ### In a browser (WebAssembly)
 
@@ -88,12 +90,14 @@ holds in memory. *Open* and *Save As* go through the browser's own file
 dialogs, and the command pane — which shells out to `bash` — is compiled out
 along with the worker thread the desktop builds interpret on.
 
-– Tested with Ubuntu 24.04 LTS and Ubuntu 26.04 LTS - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml) [![wasm](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml)
+– Tested on Debian (bookworm, trixie, forky) and Ubuntu (24.04 LTS, 26.04 LTS), macOS 11+, and Windows 10/11 - [![CI](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/main.yml) [![wasm](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/wasm.yml) [![Release](https://github.com/QGCoder/qgcoder/actions/workflows/release.yml/badge.svg)](https://github.com/QGCoder/qgcoder/actions/workflows/release.yml)
 
 ## Overview
 
-```qgcoder``` is a Qt 6 application. It needs only ```qt6-base-dev``` and
-```libqgcodeeditor-qt6-dev``` to build: the 3D tool-path view is a plain
+```qgcoder``` is a Qt 6 application. It needs only ```qt6-base-dev```,
+```libqt6opengl6-dev``` (Debian/Ubuntu ship the Qt OpenGL module as its own
+package; it is where the 3D view comes from) and ```libqgcodeeditor-qt6-dev```
+to build: the 3D tool-path view is a plain
 ```QOpenGLWidget``` driving one small shader, so libQGLViewer, GLEW and GLUT
 are no longer required. It draws through the subset shared by the OpenGL 3.3
 core profile and OpenGL ES 3.0.
@@ -109,11 +113,12 @@ but coloured line segments, so projecting them on the CPU costs little.
 The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
 ```rs274``` executable to install or point at. See [rs274ngc/README.md](src/rs274ngc/README.md).
 
-When started first, the desktop builds ask for a scratch G-code filename, and
-optionally a tool table (leave it empty to use the built-in default), as seen in the
-following screenshot:
-
-<img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/src/doc/qgcoder-002.png"/>
+A fresh install does not block on a setup dialog: the desktop builds start with
+the editor's scratch G-code in a `qgcoder-scratch.ngc` in the OS's temp
+directory, and the interpreter picks up the stock LinuxCNC millimetre tool
+table — the tools are written once to a `qgcoder-default.tbl` in the same temp
+directory and an existing file is left alone, so a user-edited default table
+survives. The *Settings* dialog still exists to point both at a real file.
 
 
 In the 3D view, drag with the left mouse button to orbit, with the right button to
