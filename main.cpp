@@ -16,7 +16,7 @@ using namespace Qt::StringLiterals;
 
 namespace {
 
-constexpr auto kAppVersion = "0.1.37";
+constexpr auto kAppVersion = "0.1.38";
 constexpr auto kAppName = "gcoder";
 constexpr auto kAppOrganization = "gcoder.koppi.github.com";
 

@@ -35,7 +35,7 @@ Grab the universal `.dmg` from the
 [releases page](https://github.com/QGCoder/qgcoder/releases) and drag
 `qgcoder.app` into `Applications`. It is only ad-hoc signed — there is no
 Developer ID certificate in CI — so the first launch needs a right-click →
-*Open*.
+*Open*. It runs on macOS 11 (Big Sur) or newer.
 
 ### Windows
 

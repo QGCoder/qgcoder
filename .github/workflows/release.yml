@@ -89,20 +89,24 @@ jobs:
 
   build-macos:
     name: macos-universal
-    runs-on: macos-latest
+    # Big Sur (macOS 11) needs Qt 6.7, and linking Qt 6.7 on the newer macOS
+    # 26 SDK fails because its FindWrapOpenGL.cmake still wants the AGL
+    # framework, which that SDK no longer ships. macos-latest points at macOS
+    # 26 now, so pin the job to macos-15, whose SDK still has AGL.
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@v7
 
     # The official Qt builds for macOS are universal, so one DMG covers both
     # Apple Silicon and Intel. Homebrew's Qt is single-architecture.
     #
-    # Not the 6.8 LTS: its FindWrapOpenGL.cmake falls back to "-framework AGL"
-    # when it cannot find AGL, and AGL is gone from the SDK the runner has, so
-    # linking fails outright. Qt dropped AGL in 6.9.3.
+    # Pinned to the 6.7 line: it is the newest Qt whose official binaries run
+    # on macOS 11 (Big Sur, the oldest release qgcoder supports); Qt 6.8
+    # raised the macOS floor to 12, and 6.10 requires 13.
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.10.*'
+        version: '6.7.*'
         host: mac
         target: desktop
         arch: clang_64
@@ -117,7 +121,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$PWD/qgcodeeditor-prefix" \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DBUILD_STATIC_LIB=ON \
             -DBUILD_EXAMPLES=OFF \
@@ -143,7 +147,7 @@ jobs:
         cmake -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$PWD/qgcodeeditor-prefix"
         cmake --build build -j"$(sysctl -n hw.ncpu)"
 

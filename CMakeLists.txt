@@ -1,8 +1,27 @@
 cmake_minimum_required(VERSION 3.21)
-project(qgcoder VERSION 0.1.37 LANGUAGES CXX C)
+project(qgcoder VERSION 0.1.38 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# A Mac building from source would otherwise default CMAKE_OSX_DEPLOYMENT_TARGET
+# to the macOS it is running on, silently raising the floor for people on
+# older releases. Keep it at 11.0, the oldest macOS qgcoder supports (Big Sur).
+if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "Minimum macOS version" FORCE)
+endif()
+
+# Qt 6.7 - the newest line that still runs on macOS 11 - bundles a
+# FindWrapOpenGL.cmake that falls back to linking the obsolete Carbon-era AGL
+# framework when it cannot find it, and AGL is gone from the newer macOS SDKs.
+# Nothing here draws through AGL: the view is a QOpenGLWidget on the 3.3 core
+# profile. Make Qt's module find its target already defined, so it leaves its
+# own AGL fallback alone.
+if(APPLE)
+    add_library(WrapOpenGL::WrapOpenGL INTERFACE IMPORTED)
+    set_target_properties(WrapOpenGL::WrapOpenGL PROPERTIES
+        INTERFACE_LINK_LIBRARIES "-framework OpenGL")
+endif()
 
 # 6.4 is what Ubuntu 24.04 LTS ships, and it is the first release with the
 # Qt::StringLiterals _s / _L1 operators this code uses.
