@@ -334,6 +334,12 @@ jobs:
         path: artifacts
         merge-multiple: true
 
+    - name: Drop the debug-symbol packages
+      # dh_strip builds a *-dbgsym .deb per flavour. Nobody installs those from
+      # a release page and they are some of the largest files, so leave them on
+      # the run's artifact page but do not publish them with the release.
+      run: find artifacts -maxdepth 1 -name '*-dbgsym_*' -delete
+
     - name: Create Release
       uses: softprops/action-gh-release@v3
       with:
