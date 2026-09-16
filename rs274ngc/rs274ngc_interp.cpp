@@ -77,12 +77,17 @@ const char *const kDefaultParameters =
     "5382\t0.000000\n5383\t0.000000\n5384\t0.000000\n5385\t0.000000\n"
     "5386\t0.000000\n";
 
-/// One tool in slot 1 so that a file with a T1 M6 in it interprets. Kept
-/// deliberately small; a real tool table comes from the settings dialog.
+/// The default tool table of a stock LinuxCNC config, in millimetres: milling
+/// cutters from 1.5mm to 8mm. What the GUI writes to a temporary .tbl for a
+/// fresh install, and what a run falls back to when no .tbl is configured or
+/// the configured file cannot be read.
 struct DefaultTool { int slot; int id; double length; double diameter; };
 const DefaultTool kDefaultTools[] = {
-    { 1, 1, 0.0, 0.125 },
-    { 2, 2, 0.0, 0.250 },
+    { 1, 1, 0.0, 6.0 },
+    { 2, 2, 0.0, 3.0 },
+    { 3, 3, 0.0, 1.5 },
+    { 4, 4, 0.0, 8.0 },
+    { 5, 5, 0.0, 2.0 },
 };
 
 /// Clears _outfile on the way out, so the canon layer is never left pointing at

@@ -486,20 +486,16 @@ void MainWindow::loadSettings()
 
     settings.endGroup();
 
-#ifdef Q_OS_WASM
-    // Insisting here the way the desktop build does would mean a nested event
-    // loop, which the browser build has not got. There is nowhere else to put
-    // the scratch file anyway: the file system is the one Emscripten keeps in
-    // memory, so just pick a name in it.
+    // A fresh install has neither of these configured, and blocking on the
+    // settings dialog every start would be hostile. Fall back to the temp
+    // directory until they are set: a scratch file for the editor's g-code,
+    // and the stock LinuxCNC millimetre tool table written out for the
+    // interpreter. A .tbl that already exists is left alone, so a user-edited
+    // default table survives.
     if (gcodefile.isEmpty())
         gcodefile = QDir::tempPath() + "/qgcoder-scratch.ngc"_L1;
-#else
-    // without a scratch g-code file we cannot work properly, so insist
-    while (gcodefile.isEmpty()) {
-        if (onSettings() == 0)
-            break;
-    }
-#endif
+    if (tooltable.isEmpty())
+        tooltable = defaultToolTable();
 }
 
 void MainWindow::loadSettingsCommand()
@@ -530,6 +526,37 @@ void MainWindow::saveSettings()
     settings.setValue(u"gcodefile"_s, gcodefile);
 
     settings.endGroup();
+}
+
+/// Write the stock LinuxCNC millimetre tool table out to a temporary .tbl so a
+/// fresh install runs without the settings dialog. A file that already exists
+/// is left alone (a user-edited default table should survive); an empty return
+/// means it could not be created, and the interpreter falls back to its own
+/// built-in copy of the same tools.
+QString MainWindow::defaultToolTable()
+{
+    static const char *const lines[] = {
+        "# qgcoder default tool table (LinuxCNC format, units: mm)\n",
+        "T1 P1 Z0.000000 D6.000000 ; 6mm end mill\n",
+        "T2 P2 Z0.000000 D3.000000 ; 3mm end mill\n",
+        "T3 P3 Z0.000000 D1.500000 ; 1.5mm end mill\n",
+        "T4 P4 Z0.000000 D8.000000 ; 8mm end mill\n",
+        "T5 P5 Z0.000000 D2.000000 ; 2mm end mill\n",
+    };
+
+    const QString path = QDir::tempPath() + "/qgcoder-default.tbl"_L1;
+    if (QFile::exists(path))
+        return path;
+
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+        return {};
+
+    QTextStream out(&f);
+    for (const char *line : lines)
+        out << line;
+    f.close();
+    return path;
 }
 
 int MainWindow::onSettings()

@@ -68,6 +68,8 @@ private: // functions
     void loadSettings();
     void saveSettings();
 
+    QString defaultToolTable();
+
     int openInViewer(const QString &filename);
     void openInBrowser(const QString &filename);
     int saveInBrowser(const QString &filename);
