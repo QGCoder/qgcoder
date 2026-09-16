@@ -19,6 +19,29 @@ find_library(GLU_LIBRARY NAMES GLU REQUIRED)
 find_library(GL_LIBRARY NAMES GL REQUIRED)
 find_library(GLUT_LIBRARY NAMES glut freeglut REQUIRED)
 
+# The NIST RS274NGC interpreter, vendored under rs274ngc/ and linked straight
+# into qgcoder - there is no separate "rs274" executable to run any more.
+# The vendored files are 1990s C-with-classes, so they are built on their own
+# with warnings off and without AUTOMOC: none of this is Qt.
+add_library(rs274ngc STATIC
+    rs274ngc/rs274ngc_pre.cc
+    rs274ngc/canon_pre.cc
+    rs274ngc/rs274ngc_interp.cpp
+)
+set_target_properties(rs274ngc PROPERTIES
+    AUTOMOC OFF
+    AUTOUIC OFF
+    AUTORCC OFF
+    POSITION_INDEPENDENT_CODE ON
+)
+target_include_directories(rs274ngc PUBLIC ${CMAKE_SOURCE_DIR}/rs274ngc)
+# only the vendored files get warnings turned off; rs274ngc_interp.cpp is ours
+set_source_files_properties(
+    rs274ngc/rs274ngc_pre.cc
+    rs274ngc/canon_pre.cc
+    PROPERTIES COMPILE_OPTIONS "-w"
+)
+
 find_library(QGCODEEDITOR_LIBRARY NAMES qgcodeeditor_qt5 qgcodeeditor)
 find_path(QGCODEEDITOR_INCLUDE_DIR NAMES QGCodeEditor/QGCodeEditor.h
   PATHS /usr/include /usr/local/include
@@ -88,6 +111,7 @@ target_compile_options(qgcoder PRIVATE
 )
 
 target_link_libraries(qgcoder PRIVATE
+    rs274ngc
     Qt5::Core
     Qt5::Gui
     Qt5::OpenGL

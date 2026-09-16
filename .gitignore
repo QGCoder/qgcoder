@@ -46,3 +46,6 @@ qgcoder.pro.user
 *.buildinfo
 *.changes
 debian/changelog
+
+# CMake out-of-tree build directory (see README.md)
+build/

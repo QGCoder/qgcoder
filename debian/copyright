@@ -24,3 +24,33 @@ License: GPL-2+
  is located at `/usr/share/common-licenses/GPL-2'. You should have received a copy
  of the GNU General Public License along with Debian; see the file LICENSE for
  details.
+
+Files: rs274ngc/*
+Copyright: Copyright (C) 2008 Mark Pictor
+ Based on software produced by the National Institute of Standards
+ and Technology (NIST).
+License: GPL-3+
+ RS274NGC is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ RS274NGC is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On a Debian system, a copy of the GNU General Public License version 3
+ is located at `/usr/share/common-licenses/GPL-3'. You should also have
+ received a copy in the file rs274ngc/LICENSE.
+
+Files: rs274ngc/rs274ngc_interp.hpp rs274ngc/rs274ngc_interp.cpp
+Copyright: Copyright (C) 2026 Jakob Flierl <jakob.flierl@gmail.com>
+License: GPL-3+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ On a Debian system, a copy of the GNU General Public License version 3
+ is located at `/usr/share/common-licenses/GPL-3'.

@@ -28,7 +28,6 @@ public:
     void parseCommand();
 
 signals:
-    void setRS274(QString s);
     void setToolTable(QString s);
     void setGcodeFile(QString f);
     void interpret();
@@ -75,9 +74,12 @@ private:  // functions
 
 private: // data
     QString home_dir, openFile;
+    /// started from the command line with a g-code file: lays the window out
+    /// for viewing a file rather than driving a command
     bool bFileMode = false;
+    /// set while openInBrowser() fills the editor, to suppress changedGcode()
+    bool bLoading = false;
 
-    QString rs274;
     QString tooltable;
     QString gcodefile;
 

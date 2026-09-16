@@ -12,9 +12,8 @@ QString str;
 
 }
 
-void SettingsDialog::setValues(QString& rs, QString& tbl, QString& gcode)
+void SettingsDialog::setValues(QString& tbl, QString& gcode)
 {
-    le_path1->setText(rs274 = rs);
     le_path2->setText(tooltable = tbl);
     le_path3->setText(gcodefile = gcode);
 }
@@ -25,14 +24,7 @@ QString pathStr;
 QString filename;
 QDir dir;
 
-    if( buttonNumber == 1)
-        {
-        if(rs274.isEmpty())
-            pathStr = "/usr/bin";
-        else
-            pathStr = dir.absoluteFilePath(rs274);
-        }
-    else if(buttonNumber == 2)
+    if(buttonNumber == 2)
         {
         if(tooltable.isEmpty())
             pathStr = home_dir + "machinekit/configs";
@@ -50,9 +42,7 @@ QDir dir;
     filename = QFileDialog::getOpenFileName(this, tr("Settings Paths"), pathStr, tr("All files (*)"));
     if(filename.length())
         {
-        if( buttonNumber == 1)
-            le_path1->setText(filename);
-        else if(buttonNumber == 2)
+        if(buttonNumber == 2)
             le_path2->setText(filename);
         else
             le_path3->setText(filename);
@@ -61,7 +51,6 @@ QDir dir;
 
 void SettingsDialog::onAccept()
 {
-    rs274 = le_path1->text();
     tooltable = le_path2->text();
     gcodefile = le_path3->text();
 

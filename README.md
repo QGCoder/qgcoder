@@ -26,7 +26,12 @@ sudo apt -f install
 
 ## Overview
 
-When started first, you have to provide ```qgcoder``` three filenames, as seen in the following screenshot:
+The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
+```rs274``` executable to install or point at. See [rs274ngc/README.md](rs274ngc/README.md).
+
+When started first, you have to provide ```qgcoder``` a scratch G-code filename, and
+optionally a tool table (leave it empty to use the built-in default), as seen in the
+following screenshot:
 
 <img src="https://raw.githubusercontent.com/QGCoder/qgcoder/master/doc/qgcoder-002.png"/>
 
@@ -43,3 +48,4 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 * **Mark Pictor** - `g2m` G-code-to-mesh interpreter core (`canonLine`, `canonMotion`, `canonMotionless`, `helicalMotion`, `linearMotion`, `machineStatus`, `nanotimer`, `lex_analyzer`, 2010) - [GPL-2.0-or-later](g2m/canonLine.hpp)
 * **Anders Wallin** - [aewallin](https://github.com/aewallin) - modifications to `g2m/g2m.hpp` / `g2m/g2m.cpp` (2011) - [GPL-2.0-or-later](g2m/g2m.hpp)
 * **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](g2m/g2m.hpp)
+* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in [`rs274ngc/`](rs274ngc/) (2008) - [GPL-3.0-or-later](rs274ngc/LICENSE)

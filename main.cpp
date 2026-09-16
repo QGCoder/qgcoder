@@ -1,4 +1,6 @@
 #include <QtWidgets>
+#include <QStandardPaths>
+#include <QDir>
 #include <QLoggingCategory>
 #include <QMessageLogContext>
 #include <QString>
@@ -16,6 +18,7 @@ void customMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 
 #include "mainwin.h"
 #include "g2m.hpp"
+#include "rs274ngc_interp.hpp"
 
 #define APP_VERSION QString("0.1.33")
 #define APP_NAME QString("gcoder")
@@ -66,6 +69,15 @@ int main(int argv, char **args)
     parser.addPositionalArgument("file", "The G-code file to open.");
 
     parser.process(*app);
+
+    // The embedded interpreter keeps its parameter file (rs274ngc.var) next to
+    // the rest of the application data, and seeds it from its built-in default
+    // on first run. Must come after setApplicationName().
+    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dataDir.isEmpty())
+        dataDir = QDir::tempPath();
+    QDir().mkpath(dataDir);
+    rs274ngc::setParameterFileDirectory(dataDir.toStdString());
 
     MainWindow *win;
 

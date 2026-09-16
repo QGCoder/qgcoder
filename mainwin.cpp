@@ -36,8 +36,6 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
 
     connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
 
-    connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
-
     connect(ui->action_AutoZoom, SIGNAL(triggered()), this, SLOT(toggleAutoZoom()));
     connect(ui->actionZoom_In, SIGNAL(triggered()), this, SLOT(zoomIn()));
     connect(ui->actionZoom_out, SIGNAL(triggered()), this, SLOT(zoomOut()));
@@ -57,12 +55,10 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, QString fileName) :
     if (bFileMode == false) {
         connect(ui->command, SIGNAL(textChanged()), this, SLOT(changedCommand()));
         QTimer::singleShot(0, this, SLOT(loadSettingsCommand()));
-        QTimer::singleShot(100, this, SLOT(changedGcode()));
         ui->dockWidget->setHidden(false);
         ui->dockWidget_2->setHidden(false);
     } else {
         QTimer::singleShot(0, this, SLOT(loadGCodeFile()));
-        QTimer::singleShot(100, this, SLOT(changedGcode()));
         ui->dockWidget->setHidden(true);
         ui->dockWidget_2->setHidden(true);
     }
@@ -105,7 +101,6 @@ void MainWindow::createG2mWorker() {
     connect(g2mThread, &QThread::finished, g2mWorker, &QObject::deleteLater);
 
     connect( this, &MainWindow::setGcodeFile,     g2mWorker, &g2m::G2mWorker::setFile, Qt::QueuedConnection);
-    connect( this, &MainWindow::setRS274,         g2mWorker, &g2m::G2mWorker::setInterp, Qt::QueuedConnection);
     connect( this, &MainWindow::setToolTable,     g2mWorker, &g2m::G2mWorker::setToolTable, Qt::QueuedConnection);
     connect( this, &MainWindow::interpret,       g2mWorker, &g2m::G2mWorker::process, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
 
@@ -118,6 +113,11 @@ void MainWindow::createG2mWorker() {
     connect( g2mWorker, &g2m::G2mWorker::signalCanonLines,         this, &MainWindow::hideProgressBar);
     connect( g2mWorker, &g2m::G2mWorker::signalError,              this, [this](QString msg) { ui->stderror->setPlainText(msg); });
     connect( g2mThread, &QThread::finished, this, &MainWindow::hideProgressBar);
+
+    // Start it here: interpret() and the other worker slots are queued
+    // connections, so anything emitted before the thread runs would just sit in
+    // its event queue.
+    g2mThread->start();
 }
 
 void MainWindow::zoomIn() {
@@ -139,8 +139,10 @@ void MainWindow::changedCommand()
 QString str;
 
     openFile = "";
-    bFileMode = false;
-    connect(ui->gcode, SIGNAL(textChanged()), this, SLOT(changedGcode()));
+    // ui->gcode is already connected to changedGcode() in the constructor, and
+    // nothing ever disconnects it. Connecting again here would add one more
+    // connection per keystroke in the command pane, and every one of them means
+    // another full interpreter run on each g-code edit.
     str = "QGCoder :- ";
     setWindowTitle(str);
     parseCommand();
@@ -148,7 +150,9 @@ QString str;
 
 void MainWindow::changedGcode() {
 
-    if(bFileMode)
+    // openInBrowser() fires textChanged once per appended line; interpreting on
+    // each of those would mean one interpreter run per line of the file.
+    if(bLoading)
         return;
 
     if (ui->gcode->toPlainText().isEmpty()) 
@@ -172,7 +176,6 @@ void MainWindow::changedGcode() {
             g2mThread->start();
         }
 
-        g2mWorker->setInterp(rs274);
         g2mWorker->setToolTable(tooltable);
         g2mWorker->setFile(gcodefile);
         showProgressBar();
@@ -219,12 +222,12 @@ void MainWindow::parseCommand() {
         if (!sh.waitForFinished(-1)) {
         }
 
+        // setPlainText emits textChanged, which is already wired to
+        // changedGcode() - scheduling it again here would interpret twice.
         ui->gcode->setPlainText(sh.readAllStandardOutput());
         ui->stderror->setPlainText(sh.readAllStandardError());
 
         sh.close();
-
-        QTimer::singleShot(0, this, SLOT(changedGcode()));
     });
 }
 
@@ -249,13 +252,12 @@ void MainWindow::loadSettings()
 
     fontSize = settings->value("fontsize", 12).toInt();
 
-    rs274 = settings->value("rs274", "").toString();
     tooltable = settings->value("tooltable", "").toString();
     gcodefile = settings->value("gcodefile", "").toString();
 
     settings->endGroup();
-        // if any of these paths is not known, cannot work properly, so insist
-    if(rs274.isEmpty() || tooltable.isEmpty() || gcodefile.isEmpty())
+        // without a scratch g-code file we cannot work properly, so insist
+    if(gcodefile.isEmpty())
         {
         int ret = 1;
         while(ret)
@@ -287,7 +289,6 @@ void MainWindow::saveSettings() {
   settings->setValue("autoZoom", ui->action_AutoZoom->isChecked());
   settings->setValue("fontsize", fontSize);
 
-  settings->setValue("rs274", rs274);
   settings->setValue("tooltable", tooltable);
   settings->setValue("gcodefile", gcodefile);
   
@@ -339,11 +340,11 @@ QString str;
         fout.close();
 
         view->clear();
-        bFileMode = true;
 
-        emit setRS274(rs274);
         emit setToolTable(tooltable);
         emit setGcodeFile(gcodefile);
+        showProgressBar();
+        emit interpret();
 
         return 0;
         }
@@ -360,6 +361,8 @@ QString str;
         {
         str = "Loading file " + filename;
         ui->statusbar->showMessage(str, 5000);
+
+        bLoading = true;
         ui->gcode->clear();
 
         QTextStream ts(&file);
@@ -369,6 +372,7 @@ QString str;
             str = ts.readLine();
             ui->gcode->appendNewPlainText(str);
             }
+        bLoading = false;
         file.close();  
 
         str = "QGCoder :- " +  filename;
@@ -377,7 +381,6 @@ QString str;
         // ui->gcode->highlightLine(1);
 
         openFile = filename;
-        bFileMode = true;
         }
     else
         {
@@ -426,18 +429,17 @@ int MainWindow::onSettings()
 
     SettingsDialog *dlg = new SettingsDialog(this, home_dir);
 
-    dlg->setValues(rs274, tooltable, gcodefile);
+    dlg->setValues(tooltable, gcodefile);
 
     dlg->exec();
 
     if(dlg->result())
         {
-        rs274 = dlg->rs274;
         tooltable = dlg->tooltable;
         gcodefile = dlg->gcodefile;
         }
 
-    if(rs274.isEmpty() || tooltable.isEmpty() || gcodefile.isEmpty())	
+    if(gcodefile.isEmpty())
         return 1;
     else
         return 0;

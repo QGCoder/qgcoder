@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "rs274ngc_interp.hpp"
+
 namespace g2m {
 
 void G2mWorker::interpret_file_async() {
@@ -21,7 +23,9 @@ void G2mWorker::interpret_file_async() {
         QString glinebuffer;
         QString tempFile = "/tmp/cutsim.temp";
         QFile	tempFileHandle( tempFile );
-        if ( !tempFileHandle.open(QIODevice::ReadWrite | QIODevice::Text))
+        // Truncate: without it a shorter g-code file leaves the tail of the
+        // previous one behind, and the interpreter reads that too.
+        if ( !tempFileHandle.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text))
         	return;
 
         if ( fileHandle.open( QIODevice::ReadOnly | QIODevice::Text) ) {
@@ -43,14 +47,8 @@ void G2mWorker::interpret_file_async() {
 
         emit gcodeLineMessage(glinebuffer);
         emit debugMessage( tr("g2m: interpreting  %1").arg(file) );
-        interpret2(tempFileHandle.fileName());
+        interpret(tempFileHandle.fileName());
     } else if (file.endsWith(".canon")) {
-        if (!chooseToolTable()) {
-            infoMsg("Can't find tool table. Aborting.");
-            emit debugMessage("Can't find tool table. Aborting.");
-            return;
-        }
-
         std::ifstream inFile(file.toLatin1());
         std::string sLine;
         QString sLinebuffer;
@@ -72,145 +70,68 @@ void G2mWorker::interpret_file_async() {
     lineVector.clear();
 }
 
-bool G2mWorker::chooseToolTable() {
-  if (tooltable.isEmpty() || !QFileInfo(tooltable).exists()){
-    QString defaultTooltable = QDir::tempPath() + "/qgcoder.tooltable";
-    QFile file(defaultTooltable);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&file);
-        out << "T1 P1 Z0.0 D0.125000 ; 1/8 inch end mill\n";
-        out << "T2 P2 Z0.0 D0.062500 ; 1/4 inch end mill\n";
-        file.close();
-        tooltable = defaultTooltable;
-        return true;
+/// The interpreter falls back to its own built-in tool table, so an unset or
+/// missing tool table is not an error - it just means "use the default".
+QString G2mWorker::toolTablePath() {
+    if (tooltable.isEmpty())
+        return QString();
+    if (!QFileInfo(tooltable).exists()) {
+        emit debugMessage( tr("g2m: tool table %1 not found, using the built-in default").arg(tooltable) );
+        return QString();
     }
-    infoMsg(" cannot find tooltable! ");
-    emit debugMessage(" cannot find tooltable! ");
-    return false;
-  }
-  return true;
+    return tooltable;
 }
 
-bool G2mWorker::startInterp2(QProcess &tc, QString tempFile) {
-    if (!chooseToolTable())
-        return false;
-    tc.setProcessChannelMode(QProcess::SeparateChannels);
-    tc.start( interp , QStringList(tempFile) );
+/// Run the embedded rs274ngc interpreter over tempFile and turn every
+/// canonical command it produces into a canonLine.
+void G2mWorker::interpret(QString tempFile) {
+    rs274ngc::Interpreter interp;
+    interp.setToolTable(toolTablePath().toStdString());
 
-    if (!tc.waitForStarted(5000)) {
-        infoMsg("Interpreter failed to start");
-        return false;
-    }
-
-    tc.write("3\n");
-
-    QString resp;
-
-    tc.waitForReadyRead(100);
-    resp = tc.readAllStandardOutput();
-
-    QByteArray toolPath = tooltable.toLocal8Bit();
-    tc.write(toolPath);
-    tc.write("\n");
-
-    if (!tc.waitForReadyRead(3000)) {
-    }
-    resp = tc.readAllStandardOutput();
-
-    if (resp.contains("Cannot open")) {
-        infoMsg("Error: Cannot open tooltable file. Check file permissions and path.");
-        emit debugMessage("Cannot open tooltable: " + tooltable);
-        return false;
-    }
-
-    if (tc.state() == QProcess::NotRunning) {
-        return false;
-    }
-
-    tc.write("1\n");
-    tc.closeWriteChannel();
-    return true;
-}
-
-void G2mWorker::interpret2(QString tempFile) {
-    QProcess toCanon;
-    currentProcess = &toCanon;
+    QString l;
     bool foundEOF = false;
 
-    if (!startInterp2(toCanon, tempFile)) {
-        currentProcess = nullptr;
-        return;
-    }
-
-    if (toCanon.state() == QProcess::NotRunning) {
-        infoMsg("Interpreter died. Bad tool table?");
-        emit debugMessage("Interpreter died. Bad tool table?");
-        toCanon.close();
-        currentProcess = nullptr;
-        return;
-    }
-
-    qint64 lineLength;
-    char line[260];
-    QString l;
-    QString cmt;
-
-    do {
-        if (interrupted) {
-            toCanon.kill();
-            toCanon.waitForFinished();
-            currentProcess = nullptr;
-            return;
-        }
-        if (toCanon.waitForReadyRead(100)) {
-            while (toCanon.canReadLine()) {
-                if (interrupted) {
-                    toCanon.kill();
-                    toCanon.waitForFinished();
-                    currentProcess = nullptr;
-                    return;
-                }
-                lineLength = toCanon.readLine(line, sizeof(line));
-                if (lineLength != -1) {
-                    cmt = line;
-                    if (cmt.contains("COMMENT(\"Gcode Line No."))
-                        total_gcode_lines++;
-                    else {
-                        l += line;
-                        foundEOF = processCanonLine(line);
-                    }
-                }
+    rs274ngc::Result result = interp.interpretFile(
+        tempFile.toStdString(),
+        [&](const std::string &canon) {
+            if (canon.find("COMMENT(\"Gcode Line No.") != std::string::npos) {
+                total_gcode_lines++;
+                return;
             }
-        }
-    } while (toCanon.state() != QProcess::NotRunning);
+            // canonLine's tokenizer counts the trailing newline as a token, so
+            // keep the line terminated exactly as it was when it arrived over
+            // a pipe from the interpreter process.
+            std::string line = canon + "\n";
+            l += QString::fromStdString(line);
+            if (processCanonLine(line))
+                foundEOF = true;
+        },
+        [this]() { return interrupted; });
 
-    currentProcess = nullptr;
+    if (result.aborted)
+        return;
 
     if (!l.isEmpty())
         emit canonLineMessage(l);
 
-    if (!foundEOF) {
-        QVector<canonLine*> allLines;
-        for (canonLine* line : lineVector) {
-            allLines.append(line);
-        }
-        emit signalCanonLines(allLines);
+    QVector<canonLine*> allLines;
+    for (canonLine* line : lineVector) {
+        allLines.append(line);
+    }
+    emit signalCanonLines(allLines);
+
+    if (!result.ok) {
+        infoMsg("Interpreter exited with error:\n" + result.error);
+        emit debugMessage( tr("Interpreter exited with error:\n%1").arg(QString::fromStdString(result.error)) );
+        emit signalError( tr("Interpreter exited with error:\n%1").arg(QString::fromStdString(result.error)) );
+        return;
     }
 
-  std::string s = (const char *)toCanon.readAllStandardError();
-  s.erase(0,s.find("executing"));
-  if (s.size() > 10) {
-    infoMsg("Interpreter exited with error:\n"+s.substr(10));
-    emit debugMessage(("Interpreter exited with error:\n"+s.substr(10)).c_str());
-    return;
-  }
-
-  if (!foundEOF) {
-    emit debugMessage("Note: G-code file processed (no explicit M2/M30 end marker found)");
-  }
+    if (!foundEOF) {
+        emit debugMessage("Note: G-code file processed (no explicit M2/M30 end marker found)");
+    }
 
     emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
-    return;
 }
 
 bool G2mWorker::processCanonLine(std::string l) {

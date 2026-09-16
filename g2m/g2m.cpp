@@ -25,7 +25,6 @@
 #include <fstream>
 #include <stdlib.h>
 
-#include <QProcess>
 #include <QTimer>
 #include <QDebug>
 #include <QStringList>
@@ -46,6 +45,7 @@
 #include "g2m.hpp"
 #include "nanotimer.hpp"
 #include "machineStatus.hpp"
+#include "rs274ngc_interp.hpp"
 
 namespace g2m {
 
@@ -70,7 +70,9 @@ void g2m::interpret_file_async() {
         QString glinebuffer;
         QString tempFile = "/tmp/cutsim.temp";
         QFile	tempFileHandle( tempFile );
-        if ( !tempFileHandle.open(QIODevice::ReadWrite | QIODevice::Text))
+        // Truncate: without it a shorter g-code file leaves the tail of the
+        // previous one behind, and the interpreter reads that too.
+        if ( !tempFileHandle.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text))
         	return;
 
         if ( fileHandle.open( QIODevice::ReadOnly | QIODevice::Text) ) {       
@@ -96,15 +98,8 @@ void g2m::interpret_file_async() {
         emit gcodeLineMessage(glinebuffer);
         
         emit debugMessage( tr("g2m: interpreting  %1").arg(file) ); 
-        //interpret(); // reads from file
-        interpret2(tempFileHandle.fileName());
+        interpret(tempFileHandle.fileName());
     } else if (file.endsWith(".canon")) { //just process each line
-        if (!chooseToolTable()) {
-            infoMsg("Can't find tool table. Aborting.");
-            emit debugMessage("Can't find tool table. Aborting.");
-            return;
-        }
-        
         std::ifstream inFile(file.toLatin1());
         std::string sLine;
         QString sLinebuffer;
@@ -127,141 +122,16 @@ void g2m::interpret_file_async() {
     lineVector.clear();
 }
 
-///ask for a tool table, even if one is configured - user may wish to change it
-bool g2m::chooseToolTable() {
-  if (tooltable.isEmpty() || !QFileInfo(tooltable).exists()){
-    QString defaultTooltable = QDir::tempPath() + "/qgcoder.tooltable";
-    QFile file(defaultTooltable);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&file);
-        out << "T1 P1 Z0.0 D0.125000 ; 1/8 inch end mill\n";
-        out << "T2 P2 Z0.0 D0.062500 ; 1/4 inch end mill\n";
-        file.close();
-        tooltable = defaultTooltable;
-        return true;
-    }
-    infoMsg(" cannot find tooltable! ");
-    emit debugMessage(" cannot find tooltable! ");
-    return false;
+/// The interpreter falls back to its own built-in tool table, so an unset or
+/// missing tool table is not an error - it just means "use the default".
+QString g2m::toolTablePath() {
+  if (tooltable.isEmpty())
+    return QString();
+  if (!QFileInfo(tooltable).exists()) {
+    emit debugMessage( tr("g2m: tool table %1 not found, using the built-in default").arg(tooltable) );
+    return QString();
   }
-  return true;
-}
-
-/// set the tooltable and start interpreting input from stdin. called from interpret()
-bool g2m::startInterp(QProcess &tc) {
-    if (!chooseToolTable())
-        return false;
-    tc.setProcessChannelMode(QProcess::SeparateChannels);
-    tc.start( interp , QStringList(file) );
-    if (!tc.waitForStarted(5000)) {
-        infoMsg("Interpreter failed to start");
-        return false;
-    }
-    tc.write("3\n");
-    if (!tc.waitForReadyRead(2000)) {
-        if (tc.state() == QProcess::NotRunning) {
-            std::string err = tc.readAllStandardError().constData();
-            infoMsg("Interpreter died: " + err);
-            return false;
-        }
-    }
-    QString resp = tc.readAllStandardOutput();
-    if (!resp.contains("name of tool file")) {
-        tc.waitForReadyRead(1000);
-        resp = tc.readAll();
-    }
-    QByteArray toolPath = tooltable.toLocal8Bit();
-    tc.write(toolPath);
-    tc.write("\n");
-    tc.waitForReadyRead(2000);
-    resp = tc.readAllStandardOutput();
-    if (resp.contains("Cannot open")) {
-        infoMsg("Error: Cannot open tooltable file. Check file permissions and path.");
-        return false;
-    }
-    tc.write("1\n");
-    tc.closeWriteChannel();
-    return true;
-}
-
-/// called after "file" set in constructor
-void g2m::interpret() {
-    //success = false;
-    QProcess toCanon;
-    bool foundEOF = false; // checked at the end
-    
-    if (!startInterp(toCanon)) // finds rs274, reads tooltable, start interpreter
-        return;
-    
-    if (!toCanon.waitForReadyRead(1000) ) {
-        if ( toCanon.state() == QProcess::NotRunning ){
-            infoMsg("Interpreter died.  Bad tool table?");
-        } else  
-            infoMsg("Interpreter timed out for an unknown reason.");
-        	std::cout << "stderr: " << (const char*)toCanon.readAllStandardError() << std::endl;
-        	std::cout << "stdout: " << (const char*)toCanon.readAllStandardOutput() << std::endl;
-        	toCanon.close();
-        	return;
-    }
-    
-    // rs274  has now started correctly, and is ready to read ngc-file
-    qint64 lineLength;
-    char line[260];
-    int fails = 0;
-    QString l;
-
-    do {
-        if (toCanon.canReadLine()) {
-            lineLength = toCanon.readLine(line, sizeof(line)); // read one output line from rs274
-            if (lineLength != -1 ) {
-            	l += line;
-                foundEOF = processCanonLine(line); // line is a canon-line
-            } else {  //shouldn't get here!
-                std::cout << " ERROR: lineLength= " << lineLength << "  fails="<< fails << "\n";
-                fails++;
-            }
-        } else {
-            std::cout << " ERROR: toCanon.canReadLine() fails="<< fails << "\n";
-            fails++;
-        }
-        toCanon.waitForReadyRead();
-    } while ( (fails < 1000) &&
-            ( (toCanon.canReadLine()) ||
-            ( toCanon.state() != QProcess::NotRunning ) )  );
-
-    emit canonLineMessage( l.left(l.size()-1) );
-
-    if (fails > 1) {
-        if (fails < 1000) {
-            infoMsg("Waited for interpreter over 1000  times.");
-        } else {
-            infoMsg("Waited 1000 seconds for interpreter. Giving up.");
-            toCanon.close();
-            return;
-        }
-    }
-  
-    std::string s = (const char *)toCanon.readAllStandardError();
-    s.erase(0,s.find("executing"));
-    if (s.size() > 10) {
-        emit signalError(QString("Interpreter exited with error:\n" +
-                                 QString::fromUtf8(s.substr(10).c_str())));
-    	infoMsg("Interpreter exited with error:\n"+s.substr(10));
-    	return;
-    }
-
-    if (!foundEOF && toCanon.state() == QProcess::NotRunning) {
-        QVector<canonLine*> allLines;
-        for (canonLine* line : lineVector) {
-            allLines.append(line);
-        }
-        emit signalCanonLines(allLines);
-    }
-
-    emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
-
-    toCanon.close();
-    return;
+  return tooltable;
 }
 
 /// process a canon-line input string. this is a canon-string from rs274.
@@ -297,140 +167,52 @@ void g2m::infoMsg(std::string s) {
     std::cout << s << std::endl;
 }
 
-/// set the tooltable and start interpreting input from stdin. called from interpret()
-/// set the tooltable and start interpreting input from stdin. called from interpret()
-bool g2m::startInterp2(QProcess &tc, QString tempFile) {
-    if (!chooseToolTable())
-        return false;
-    // run:  rs274 file.ngc
-    tc.setProcessChannelMode(QProcess::SeparateChannels);
-    tc.start( interp , QStringList(tempFile) );
+/// Run the embedded rs274ngc interpreter over tempFile and turn every
+/// canonical command it produces into a canonLine.
+void g2m::interpret(QString tempFile) {
+    rs274ngc::Interpreter interp;
+    interp.setToolTable(toolTablePath().toStdString());
 
-    if (!tc.waitForStarted(5000)) {
-        infoMsg("Interpreter failed to start");
-        return false;
-    }
-
-    tc.write("3\n");
-
-    QString resp;
-
-    tc.waitForReadyRead(100);
-    resp = tc.readAllStandardOutput();
-
-    QByteArray toolPath = tooltable.toLocal8Bit();
-    tc.write(toolPath);
-    tc.write("\n");
-    tc.waitForReadyRead(3000);
-    resp = tc.readAllStandardOutput();
-    
-    if (resp.contains("Cannot open")) {
-        infoMsg("Error: Cannot open tooltable file. Check file permissions and path.");
-        emit debugMessage("Cannot open tooltable: " + tooltable);
-        return false;
-    }
-
-    tc.write("1\n");
-    tc.closeWriteChannel();
-    return true;
-}
-
-/// called after "file" set in constructor
-void g2m::interpret2(QString tempFile) {
-    //success = false;
-    QProcess toCanon;
-    bool foundEOF = false; // checked at the end
-
-    if (!startInterp2(toCanon, tempFile)) // finds rs274, reads tooltable, start interpreter
-        return;
-
-    if (!toCanon.waitForReadyRead(1000) ) {
-        if ( toCanon.state() == QProcess::NotRunning ){
-            infoMsg("Interpreter died.  Bad tool table?");
-            emit debugMessage("Interpreter died.  Bad tool table?");
-        } else {
-            infoMsg("Interpreter timed out for an unknown reason.");
-            emit debugMessage("Interpreter timed out for an unknown reason.");
-            		}
-        //std::cout << "stderr: " << (const char*)toCanon.readAllStandardError() << std::endl;
-        //std::cout << "stdout: " << (const char*)toCanon.readAllStandardOutput() << std::endl;
-        toCanon.close();
-        return;
-    }
-
-    // rs274  has now started correctly, and is ready to read ngc-file
-    qint64 lineLength;
-    char line[260];
-    int fails = 0;
     QString l;
-    QString cmt;
+    bool foundEOF = false;
 
-    do {
-        if (toCanon.canReadLine()) {
-            lineLength = toCanon.readLine(line, sizeof(line)); // read one output line from rs274
-            if (lineLength != -1 ) {
-            	cmt = line;
-            	if (cmt.contains("COMMENT(\"Gcode Line No."))
-            		total_gcode_lines++;
-            	else {
-            		l += line;
-            		foundEOF = processCanonLine(line); // line is a canon-line
-            		//lineTable.push_back(total_gcode_lines);
-            	}
-            } else {  //shouldn't get here!
-                //std::cout << " ERROR: lineLength= " << lineLength << "  fails="<< fails << "\n";
-                fails++;
+    rs274ngc::Result result = interp.interpretFile(
+        tempFile.toStdString(),
+        [&](const std::string &canon) {
+            if (canon.find("COMMENT(\"Gcode Line No.") != std::string::npos) {
+                total_gcode_lines++;
+                return;
             }
-        } else {
-            //std::cout << " ERROR: toCanon.canReadLine() fails="<< fails << "\n";
-            fails++;
-        }
-        if (!toCanon.waitForReadyRead(500))
-            break;
-    } while ( (fails < 1000) &&
-           ( (toCanon.canReadLine()) ||
-            ( toCanon.state() != QProcess::NotRunning ) )  );
+            // canonLine's tokenizer counts the trailing newline as a token, so
+            // keep the line terminated exactly as it was when it arrived over
+            // a pipe from the interpreter process.
+            std::string line = canon + "\n";
+            l += QString::fromStdString(line);
+            if (processCanonLine(line))
+                foundEOF = true;
+        });
 
     emit canonLineMessage( l.left(l.size()-1) );
 
-    if (!foundEOF && toCanon.state() == QProcess::NotRunning) {
-        QVector<canonLine*> allLines;
-        for (canonLine* line : lineVector) {
-            allLines.append(line);
-        }
-        emit signalCanonLines(allLines);
+    QVector<canonLine*> allLines;
+    for (canonLine* line : lineVector) {
+        allLines.append(line);
+    }
+    emit signalCanonLines(allLines);
+
+    if (!result.ok) {
+        infoMsg("Interpreter exited with error:\n" + result.error);
+        emit debugMessage( tr("Interpreter exited with error:\n%1").arg(QString::fromStdString(result.error)) );
+        emit signalError( tr("Interpreter exited with error:\n%1").arg(QString::fromStdString(result.error)) );
+        return;
     }
 
-    if (fails > 1) {
-        if (fails < 1000) {
-            infoMsg("Waited for interpreter over 1000  times.");
-            emit debugMessage("Waited for interpreter over 1000  times.");
-        } else {
-            infoMsg("Waited 1000 seconds for interpreter. Giving up.");
-            emit debugMessage("Waited 1000 seconds for interpreter. Giving up.");
-            toCanon.close();
-            return;
-        }
+    if (!foundEOF) {
+        infoMsg("Warning: file data not terminated correctly. If the file is terminated correctly, this indicates a problem interpreting the file.");
+        emit debugMessage("Warning: file data not terminated correctly. If the file is terminated correctly, this indicates a problem interpreting the file.");
     }
-
-  std::string s = (const char *)toCanon.readAllStandardError();
-  s.erase(0,s.find("executing"));
-  if (s.size() > 10) {
-    infoMsg("Interpreter exited with error:\n"+s.substr(10));
-    emit debugMessage(("Interpreter exited with error:\n"+s.substr(10)).c_str());
-    return;
-  }
-
-  if (!foundEOF) {
-    infoMsg("Warning: file data not terminated correctly. If the file is terminated correctly, this indicates a problem interpreting the file.");
-    emit debugMessage("Warning: file data not terminated correctly. If the file is terminated correctly, this indicates a problem interpreting the file.");
-  }
 
     emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
-
-    toCanon.kill();
-    toCanon.waitForFinished();
-    return;
 }
 
 } // end namespace
