@@ -63,6 +63,10 @@ set_source_files_properties(
     PROPERTIES COMPILE_OPTIONS "${rs274ngc_no_warnings}"
 )
 
+# The LinuxCNC RS274NGC interpreter, vendored under src/linuxcnc/. Not wired
+# into qgcoder yet: the NIST interpreter is still the one that runs.
+add_subdirectory(src/linuxcnc)
+
 # The G-code editor widget: https://github.com/QGCoder/libqgcodeeditor
 find_library(QGCODEEDITOR_LIBRARY NAMES qgcodeeditor_qt6 qgcodeeditor REQUIRED)
 find_path(QGCODEEDITOR_INCLUDE_DIR
