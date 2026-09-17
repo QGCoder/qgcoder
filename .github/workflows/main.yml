@@ -69,6 +69,14 @@ jobs:
     - name: Build binary package
       run: dpkg-buildpackage -b -rfakeroot -us -uc
 
+    # The g-code programs in src/tests, interpreted and compared against their
+    # recorded canonical output. They cover what the LinuxCNC interpreter can
+    # do and the NIST one could not - o-word subroutines, loops, conditionals
+    # and the canned cycles - so a change in what qgcoder would draw fails here
+    # rather than reaching a user.
+    - name: Run the interpreter tests
+      run: ctest --test-dir build --output-on-failure
+
     - name: Install binary package
       run: sudo dpkg -i ../qgcoder*deb
 

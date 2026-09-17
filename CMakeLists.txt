@@ -167,3 +167,33 @@ if(WIN32 OR APPLE)
     )
     install(SCRIPT ${qgcoder_deploy_script})
 endif()
+
+# ---------------------------------------------------------------------------
+# Tests
+#
+# The g-code programs in src/tests exercise what the LinuxCNC interpreter does
+# and the NIST one it replaced could not: o-word subroutines with parameters,
+# loops and conditionals, and the canned cycles. Each is interpreted and its
+# canonical output compared against a recorded copy, so a change in what
+# qgcoder would draw shows up as a diff rather than as a bug report.
+#
+# They need a host binary, so they are skipped when cross-compiling - which is
+# what the WebAssembly build is.
+# ---------------------------------------------------------------------------
+if(NOT CMAKE_CROSSCOMPILING)
+    enable_testing()
+
+    add_executable(interp_test src/tests/interp_test.cpp)
+    set_target_properties(interp_test PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+    target_link_libraries(interp_test PRIVATE linuxcnc-rs274ngc)
+
+    foreach(case oword cycles)
+        add_test(NAME interp-${case}
+                 COMMAND ${CMAKE_COMMAND}
+                         -DTOOL=$<TARGET_FILE:interp_test>
+                         -DNGC=${CMAKE_CURRENT_SOURCE_DIR}/src/tests/${case}.ngc
+                         -DEXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/src/tests/${case}.expected
+                         -DWORKDIR=${CMAKE_CURRENT_BINARY_DIR}/tests/${case}
+                         -P ${CMAKE_CURRENT_SOURCE_DIR}/src/tests/run_case.cmake)
+    endforeach()
+endif()
