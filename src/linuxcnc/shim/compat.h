@@ -207,7 +207,12 @@ inline struct tm *localtime(const long *t)
 #include <string>
 #include <system_error>
 
-#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+// Apple is excluded regardless of the feature test. libc++ ships the
+// floating-point from_chars but annotates it as introduced in macOS 13.4, and
+// qgcoder targets macOS 11 (Big Sur), so using it is a hard error - "is
+// unavailable" - not a silent fallback. The feature-test macro says nothing
+// about the deployment target, so it cannot answer this on its own.
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L && !defined(__APPLE__)
 
 /// \param first start of the text
 /// \param last  one past its end
