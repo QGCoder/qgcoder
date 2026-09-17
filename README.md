@@ -40,9 +40,12 @@ Developer ID certificate in CI — so the first launch needs a right-click →
 ### Windows
 
 Grab the `qgcoder-<version>-windows-installer.exe` from the
-[releases page](https://github.com/QGCoder/qgcoder/releases). It is built with
-MinGW-w64 and ships the whole Qt 6 runtime it links against, so there is
-nothing else to install on the target machine. The command pane shells out to
+[releases page](https://github.com/QGCoder/qgcoder/releases), or from the
+`windows-mingw64` artifact of any [CI run](https://github.com/QGCoder/qgcoder/actions/workflows/windows.yml)
+to try a build from `main`. It is built with MinGW-w64 and ships the whole Qt 6
+runtime it links against - the Qt DLLs, the QPA platform plugin and every
+MinGW library those pull in - so there is nothing else to install on the target
+machine. The command pane shells out to
 `bash`, so that one pane does nothing useful there; the editor and the 3D view
 are fine.
 

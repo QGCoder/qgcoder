@@ -1,0 +1,132 @@
+# The Windows build.
+#
+# Runs on every push and pull request like the other platforms, and is called
+# by release.yml on a tag, where its NSIS installer becomes a release asset.
+# Kept in its own file rather than copied into both: the deploy step walks the
+# whole import table to gather the MinGW runtime, and two copies would drift -
+# which they had, the CI one shipping three DLLs by hand while this one
+# collected every dependency.
+
+name: Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_call:
+
+jobs:
+  build-windows:
+    name: windows-mingw64
+    # MinGW rather than MSVC: the same GCC the Ubuntu job uses, so the only
+    # things that can break here are real portability problems, and the result
+    # needs no Visual C++ redistributable.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: actions/checkout@v7
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        cache: true
+        install: git
+        pacboy: >-
+          cc:p
+          cmake:p
+          ninja:p
+          qt6-base:p
+          nsis:p
+
+    - name: Build and install libqgcodeeditor
+      run: |
+        git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
+        cmake -S libqgcodeeditor -B libqgcodeeditor/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$(pwd -W)/qgcodeeditor-prefix" \
+            -DBUILD_STATIC_LIB=ON \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_DESIGNER_PLUGIN=OFF
+        cmake --build libqgcodeeditor/build
+        cmake --install libqgcodeeditor/build
+
+    - name: Build qgcoder
+      run: |
+        cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(pwd -W)/qgcodeeditor-prefix"
+        cmake --build build
+
+    - name: Deploy qgcoder
+      run: |
+        cmake --install build --prefix "$(pwd -W)/dist"
+        # windeployqt only knows about Qt, not about the rest of the runtime.
+        # MSYS2's Qt links against the usual MinGW libraries (icu, freetype,
+        # harfbuzz, png, zstd, brotli, ...) and the GCC runtime, and every one
+        # of those has to ride along or the exe will not start. Walk the
+        # import table of the shipped tree until nothing new shows up, copying
+        # each referenced /mingw64/bin DLL - so a Qt bump that swaps libicu78
+        # for libicu79 fixes itself instead of breaking the release silently.
+        while :; do
+          copied=0
+          for dll in $(objdump -p dist/bin/*.exe dist/bin/*.dll dist/share/qt6/plugins/*/*.dll 2>/dev/null \
+                       | sed -n 's/.*DLL Name: //p' | sort -u); do
+            if [ ! -e "dist/bin/$dll" ] && [ -f "/mingw64/bin/$dll" ]; then
+              cp "/mingw64/bin/$dll" "dist/bin/"
+              copied=1
+            fi
+          done
+          [ "$copied" -eq 0 ] && break
+        done
+
+    - name: Check that the binary runs
+      run: ./dist/bin/qgcoder.exe --version
+
+    - name: Verify the Qt runtime is complete
+      run: |
+        # --version above never loads the Qt GUI plugins, so make sure the
+        # installer will actually run: the qt.conf that ties the plugin path
+        # to the install prefix and the QPA platform plugin are there, and no
+        # MinGW DLL the shipped tree refers to is missing from bin\. A DLL
+        # that exists in /mingw64/bin was a library the deploy step should
+        # have copied across; one that does not is a Windows system DLL that
+        # every target machine already has.
+        test -f dist/bin/qt.conf
+        test -f dist/share/qt6/plugins/platforms/qwindows.dll
+        for dll in $(objdump -p dist/bin/*.exe dist/bin/*.dll dist/share/qt6/plugins/*/*.dll 2>/dev/null \
+                     | sed -n 's/.*DLL Name: //p' | sort -u); do
+          case "$dll" in
+            *.dll) ;;
+            *) continue ;;
+          esac
+          [ -e "dist/bin/$dll" ] && continue
+          if [ -f "/mingw64/bin/$dll" ]; then
+            echo "missing DLL: $dll"
+            exit 1
+          fi
+        done
+        echo "Qt runtime complete"
+
+    - name: Build the installer
+      run: |
+        # On a tag the tag names the installer; on an ordinary push there is
+        # no tag, so fall back to the version the project declares.
+        if [ "$GITHUB_REF_TYPE" = tag ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+        else
+            VERSION="$(sed -n 's/^project(qgcoder VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+        fi
+        mkdir -p artifacts
+        cd installer
+        makensis -DVERSION="$VERSION" qgcoder.nsi
+        mv "qgcoder-${VERSION}-windows-installer.exe" ../artifacts/
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: windows-mingw64
+        if-no-files-found: error
+        path: artifacts
