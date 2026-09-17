@@ -33,6 +33,8 @@
 // has declared the POSIX version as well.
 #if !defined(__GLIBC__)
 #  include <cstring>
+#  include <ctime>
+#  include <io.h>
 
 /// \param path the path to take the last component of
 /// \returns a pointer into \a path, after the last separator
@@ -128,6 +130,36 @@ inline int link(const char *oldpath, const char *newpath)
     std::fclose(in);
     return std::fclose(out) == 0 ? 0 : -1;
 }
+/// Resolve \a path to an absolute one. Windows spells this _fullpath().
+/// \param path the path to resolve
+/// \param resolved a buffer of at least _MAX_PATH, or NULL to allocate one
+/// \returns the resolved path, or NULL when it does not exist
+inline char *realpath(const char *path, char *resolved)
+{
+    return _fullpath(resolved, path, _MAX_PATH);
+}
+
+/// Flush a file's data to disk. _commit() is the Windows equivalent; the
+/// interpreter calls it after rewriting the parameter file.
+/// \param fd the file descriptor to flush
+/// \returns 0 on success, -1 on failure
+inline int fdatasync(int fd) { return _commit(fd); }
+
+/// localtime() for a plain long.
+///
+/// MinGW's struct timeval carries a 32-bit long tv_sec while time_t is 64-bit,
+/// so the interpreter's logging code passes a long* where localtime() wants a
+/// const time_t*. Overloading on the narrower type converts and forwards,
+/// which is what the caller means; the call inside picks the real localtime()
+/// because tt is a time_t.
+/// \param t seconds since the epoch
+/// \returns the broken-down local time
+inline struct tm *localtime(const long *t)
+{
+    const time_t tt = *t;
+    return localtime(&tt);
+}
+
 #endif // _WIN32
 
 // ---------------------------------------------------------------------------
