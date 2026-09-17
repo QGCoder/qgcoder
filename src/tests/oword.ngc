@@ -1,0 +1,46 @@
+(O-word subroutines, named parameters, loops and conditionals.)
+(None of this is RS274NGC as NIST left it - it is all LinuxCNC.)
+G21 G90 G17 G40
+F300
+
+(--- named parameters, global and local ---)
+#<_depth> = -2.0
+#<pitch>  = 8.0
+
+(--- a subroutine taking positional parameters ---)
+o<peck> sub
+  (#1 = x, #2 = y)
+  G0 X#1 Y#2
+  G1 Z#<_depth>
+  G0 Z5
+o<peck> endsub
+
+(--- call it three times ---)
+o<peck> call [0] [0]
+o<peck> call [#<pitch>] [0]
+o<peck> call [#<pitch>] [#<pitch>]
+
+(--- a while loop ---)
+#<i> = 0
+o<loop> while [#<i> LT 3]
+  G0 X[#<i> * 10] Y20
+  G1 Z-1
+  G0 Z5
+  #<i> = [#<i> + 1]
+o<loop> endwhile
+
+(--- a conditional ---)
+o<cond> if [#<pitch> GT 5]
+  G0 X50 Y50
+o<cond> else
+  G0 X-50 Y-50
+o<cond> endif
+
+(--- a subroutine that returns a value ---)
+o<double> sub
+  o<double> return [#1 * 2]
+o<double> endsub
+o<double> call [21]
+G0 X#<_value> Y0
+
+M2

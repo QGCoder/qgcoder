@@ -1,0 +1,28 @@
+(Canned cycles: G81/G82/G83/G73/G85/G89, and G98/G99 retract modes.)
+G21 G90 G17 G40
+F250
+G0 X0 Y0 Z10
+
+(--- G81 plain drill, four holes on a bolt circle via L repeat ---)
+G98 G81 X10 Y0 Z-5 R2
+X20 Y0
+X30 Y0
+
+(--- G82 drill with dwell at the bottom ---)
+G82 X10 Y10 Z-4 R2 P0.5
+
+(--- G83 peck drill ---)
+G83 X20 Y10 Z-12 R2 Q3
+
+(--- G73 high-speed peck, chip break ---)
+G73 X30 Y10 Z-9 R2 Q3
+
+(--- G85 bore in and out at feed ---)
+G99 G85 X10 Y20 Z-6 R2
+
+(--- G89 bore with dwell ---)
+G89 X20 Y20 Z-6 R2 P0.3
+
+G80
+G0 Z10
+M2

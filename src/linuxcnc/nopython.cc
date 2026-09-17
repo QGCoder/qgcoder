@@ -12,6 +12,7 @@
 #include "pythonplugin/python_plugin.hh"
 #include "interp_base.hh"
 #include "interp_internal.hh"
+#include "interp_python.hh"
 #include "interp_return.hh"
 #include "tooldata.hh"
 
@@ -40,8 +41,25 @@ PyObject *PyExc_KeyError = nullptr;
 PyObject *PyExc_TypeError = nullptr;
 PyObject *PyExc_ValueError = nullptr;
 
-pycontext::pycontext() {}
-pycontext::~pycontext() {}
+// pycontext holds the arguments and return value of a Python call. It is
+// still constructed for every subroutine frame whether or not Python is in
+// play - enter_context() writes py_return_type through it before it knows
+// what kind of call this is - so impl has to exist. These are upstream's
+// definitions from interp_python.cc, which is not vendored; the copy
+// constructor and assignment are declared in interp_internal.hh and were
+// missing here, which would have been a link error the moment a frame was
+// copied.
+pycontext::pycontext() : impl(new pycontext_impl) {}
+pycontext::~pycontext() { delete impl; }
+pycontext::pycontext(const pycontext &other) : impl(new pycontext_impl(*other.impl)) {}
+pycontext &pycontext::operator=(const pycontext &other)
+{
+    if (&other == this)
+        return *this;
+    delete impl;
+    impl = new pycontext_impl(*other.impl);
+    return *this;
+}
 
 int Interp::py_reload() { return INTERP_OK; }
 int Interp::py_execute(const char * /*cmd*/, bool /*as_file*/) { return INTERP_OK; }
