@@ -32,6 +32,22 @@
 #ifdef _WIN32
 #  include <cstdio>
 #  include <cstdlib>
+#  include <cstring>
+
+/// The file name at the end of \a path, as POSIX basename() gives it. Windows
+/// has no <libgen.h>. This is the const form: the interpreter only reads the
+/// result, and never expects \a path to be modified.
+/// \param path the path to take the last component of
+/// \returns a pointer into \a path, after the last separator
+inline char *basename(const char *path)
+{
+    if (!path || !*path)
+        return const_cast<char *>(".");
+    const char *slash = std::strrchr(path, '/');
+    const char *backslash = std::strrchr(path, '\\');
+    const char *last = (slash > backslash) ? slash : backslash;
+    return const_cast<char *>(last ? last + 1 : path);
+}
 
 /// Resolve \a path to an absolute one. Windows spells this _fullpath().
 /// \param path the path to resolve
