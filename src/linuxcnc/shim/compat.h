@@ -59,6 +59,45 @@ inline char *basename(const char *path)
 #  include <cstdlib>
 #  include <cstring>
 
+// The POSIX per-thread locale API, which inifile.cc uses to force the C
+// locale around strtoll(). Windows has the same idea under different names,
+// except for uselocale(): the MSVC runtime installs a locale per thread with
+// _configthreadlocale() plus setlocale() rather than by handle. Nothing here
+// needs to do that - the driver already pins LC_NUMERIC to "C" for the whole
+// run, which is the only reason this code exists - so uselocale() reports
+// success and leaves the thread's locale where the driver put it.
+#  include <clocale>
+
+typedef _locale_t locale_t;
+#  define LC_NUMERIC_MASK LC_NUMERIC
+#  define LC_ALL_MASK     LC_ALL
+
+/// \param mask which categories to set, ignored - the whole locale is built
+/// \param name the locale to build, e.g. "C"
+/// \param base an existing locale to modify, ignored
+/// \returns the new locale, or NULL if it could not be built
+inline locale_t newlocale(int mask, const char *name, locale_t base)
+{
+    (void)mask;
+    (void)base;
+    return _create_locale(LC_ALL, name);
+}
+
+/// \param loc the locale to release
+inline void freelocale(locale_t loc) { _free_locale(loc); }
+
+/// Report the thread's locale. The driver has already pinned LC_NUMERIC to
+/// "C", so there is nothing to install and nothing to restore.
+/// \param loc ignored
+/// \returns a non-NULL handle, which is all the callers test for
+inline locale_t uselocale(locale_t loc)
+{
+    (void)loc;
+    static _locale_t current = _create_locale(LC_ALL, "C");
+    return current;
+}
+
+
 // Windows spells the reentrant strtok strtok_s(), with the same signature.
 // A macro rather than a function: whether MinGW happens to declare strtok_r
 // varies by version, and redeclaring it would then conflict, while redirecting

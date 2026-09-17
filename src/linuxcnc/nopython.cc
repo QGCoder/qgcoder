@@ -61,3 +61,52 @@ int hal_is_init(void) { return 0; }
 int hal_get_p(const char * /*name*/, char * /*buf*/, int /*size*/) { return -1; }
 int hal_get_s(const char * /*name*/, char * /*buf*/, int /*size*/) { return -1; }
 }
+
+// ---------------------------------------------------------------------------
+// Emscripten declares wordexp() in <wordexp.h> but does not implement it, so
+// the interpreter compiles and then fails to link. rs274ngc_pre.cc uses it to
+// expand shell syntax in directory names read from a machine .ini, which
+// qgcoder never supplies, so these hand the word back unexpanded - valid, one
+// word, and never reached. Windows takes the header in shim/win instead,
+// because there it does not exist at all.
+// ---------------------------------------------------------------------------
+#ifdef __EMSCRIPTEN__
+#include <wordexp.h>
+#include <cstdlib>
+#include <cstring>
+
+extern "C" {
+
+/// \param words the text to expand
+/// \param result filled in with \a words as a single word
+/// \param flags ignored
+/// \returns 0, or WRDE_NOSPACE if it could not allocate
+int wordexp(const char *words, wordexp_t *result, int flags)
+{
+    (void)flags;
+    if (!result)
+        return WRDE_NOSPACE;
+    result->we_wordv = (char **)calloc(2, sizeof(char *));
+    if (!result->we_wordv)
+        return WRDE_NOSPACE;
+    result->we_wordv[0] = strdup(words ? words : "");
+    result->we_wordv[1] = nullptr;
+    result->we_wordc = 1;
+    result->we_offs = 0;
+    return 0;
+}
+
+/// \param result the result to release
+void wordfree(wordexp_t *result)
+{
+    if (!result || !result->we_wordv)
+        return;
+    for (size_t i = 0; i < result->we_wordc; ++i)
+        free(result->we_wordv[i]);
+    free(result->we_wordv);
+    result->we_wordv = nullptr;
+    result->we_wordc = 0;
+}
+
+} // extern "C"
+#endif // __EMSCRIPTEN__
