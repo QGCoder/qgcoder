@@ -36,7 +36,7 @@
 #include "g2m.hpp"
 #include "nanotimer.hpp"
 #include "machineStatus.hpp"
-#include "rs274ngc_interp.hpp"
+#include "interp_driver.hpp"
 
 namespace g2m {
 

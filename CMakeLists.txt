@@ -35,36 +35,9 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # taking the window icon with it.
 set(CMAKE_AUTORCC ON)
 
-# The NIST RS274NGC interpreter, vendored under rs274ngc/ and linked straight
-# into qgcoder - there is no separate "rs274" executable to run any more.
-# The vendored files are 1990s C-with-classes, so they are built on their own
-# with warnings off and without AUTOMOC: none of this is Qt.
-add_library(rs274ngc STATIC
-    src/rs274ngc/rs274ngc_pre.cc
-    src/rs274ngc/canon_pre.cc
-    src/rs274ngc/rs274ngc_interp.cpp
-)
-set_target_properties(rs274ngc PROPERTIES
-    AUTOMOC OFF
-    AUTOUIC OFF
-    AUTORCC OFF
-    POSITION_INDEPENDENT_CODE ON
-)
-target_include_directories(rs274ngc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/rs274ngc)
-# only the vendored files get warnings turned off; rs274ngc_interp.cpp is ours
-if(MSVC)
-    set(rs274ngc_no_warnings "/w")
-else()
-    set(rs274ngc_no_warnings "-w")
-endif()
-set_source_files_properties(
-    rs274ngc/rs274ngc_pre.cc
-    rs274ngc/canon_pre.cc
-    PROPERTIES COMPILE_OPTIONS "${rs274ngc_no_warnings}"
-)
-
-# The LinuxCNC RS274NGC interpreter, vendored under src/linuxcnc/. Not wired
-# into qgcoder yet: the NIST interpreter is still the one that runs.
+# The RS274NGC interpreter, vendored from LinuxCNC under src/linuxcnc/ and
+# linked straight into qgcoder - there is no separate "rs274" executable to
+# run any more. See src/linuxcnc/README.md.
 add_subdirectory(src/linuxcnc)
 
 # The G-code editor widget: https://github.com/QGCoder/libqgcodeeditor
@@ -122,7 +95,7 @@ target_compile_definitions(qgcoder PRIVATE
 )
 
 target_link_libraries(qgcoder PRIVATE
-    rs274ngc
+    linuxcnc-rs274ngc
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets

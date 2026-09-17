@@ -9,12 +9,19 @@
 
 #include "rs274ngc.hh"
 #include "rs274ngc_interp.hh"
+#include "pythonplugin/python_plugin.hh"
 #include "interp_base.hh"
 #include "interp_internal.hh"
 #include "interp_return.hh"
 #include "tooldata.hh"
 
-PythonPlugin *python_plugin = nullptr;
+/// Not NULL: the interpreter calls python_plugin->is_callable() without
+/// checking in a couple of places. PYUSABLE is
+/// "python_plugin && python_plugin->usable()", and usable() is false, so every
+/// Python path stays dead either way - this one just has no null dereference
+/// waiting in it.
+static PythonPlugin g_unusablePlugin;
+PythonPlugin *python_plugin = &g_unusablePlugin;
 
 /// #<_task> tells a g-code program whether it is running under LinuxCNC's task
 /// controller or only being previewed. It is a preview here, always.

@@ -11,19 +11,21 @@
 PROJECT_NAME           = qgcoder
 PROJECT_BRIEF          = "An interactive G-code editing GUI"
 
-# The sources. The RS274NGC interpreter vendored from NIST is excluded: it is
+# The sources. The interpreter vendored from LinuxCNC is excluded: it is
 # third-party code carried as it came - it is built with warnings off for the
 # same reason - and documenting it would be churn that re-vendoring discards.
-# rs274ngc_interp.* is ours, the in-process driver that replaces its driver.cc,
-# so it stays in.
+# interp_driver.* is ours and stays in. nopython.cc is ours too, but every
+# symbol in it belongs to an upstream class that is excluded here, so doxygen
+# would only report them as orphans.
 INPUT                  = src
 RECURSIVE              = YES
-EXCLUDE                = src/rs274ngc/canon.hh \
-                         src/rs274ngc/canon_pre.cc \
-                         src/rs274ngc/rs274ngc.hh \
-                         src/rs274ngc/rs274ngc_errors.cc \
-                         src/rs274ngc/rs274ngc_pre.cc \
-                         src/rs274ngc/rs274ngc_return.hh
+EXCLUDE                = src/linuxcnc/emc \
+                         src/linuxcnc/libnml \
+                         src/linuxcnc/libposemath \
+                         src/linuxcnc/rtapi \
+                         src/linuxcnc/hal \
+                         src/linuxcnc/shim \
+                         src/linuxcnc/nopython.cc
 
 OUTPUT_DIRECTORY       = doc
 GENERATE_LATEX         = NO

@@ -13,7 +13,7 @@
 
 #include "canonLine.hpp"
 #include "mainwin.h"
-#include "rs274ngc_interp.hpp"
+#include "interp_driver.hpp"
 
 using namespace Qt::StringLiterals;
 

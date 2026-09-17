@@ -51,7 +51,11 @@ canonMotionless::canonMotionless(std::string canonL, machineStatus prevStatus):c
   } else if (cmdMatch("START_SPINDLE_COUNTERCLOCKWISE")) {
     status.setSpindleStatus(SPINDLE_STATUS(CCW));
   } else if (cmdMatch("SET_SPINDLE_SPEED")) {
-    status.setSpindleSpeed(tok2d(3));
+    // LinuxCNC's canon layer puts the spindle number first - the speed is the
+    // last argument either way:
+    //   SET_SPINDLE_SPEED(2000.0000)      from the old NIST canon
+    //   SET_SPINDLE_SPEED(0, 2000.0000)   from LinuxCNC's
+    status.setSpindleSpeed(tok2d(canonTokens.size() - 1));
   } else if (cmdMatch("MIST_ON")) {
     coolantStruct c = status.getCoolant();
     c.mist = true;
@@ -69,6 +73,12 @@ canonMotionless::canonMotionless(std::string canonL, machineStatus prevStatus):c
     c.flood = false;
     status.setCoolant(c);
   } else if (cmdMatch("DWELL")) {
+  } else if (cmdMatch("ON_RESET")) {
+    // LinuxCNC emits this at startup, after it has issued the modal defaults;
+    // there is nothing to reset in a preview.
+  } else if (cmdMatch("SET_G92_OFFSET")) {
+    // G92 shifts the coordinate system on top of the G5x offset. Handled where
+    // SET_G5X_OFFSET is, below, which is what the tool path is drawn against.
   } else if (cmdMatch("SET_FEED_MODE")) { // do nothing?
   } else if (cmdMatch("SET_SPINDLE_MODE")) { // do nothing?
   } else if (cmdMatch("PALLET_SHUTTLE")) { // do nothing?

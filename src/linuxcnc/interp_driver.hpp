@@ -16,8 +16,8 @@
 /// \file
 /// In-process driver for the embedded NIST RS274NGC interpreter.
 
-#ifndef RS274NGC_INTERP_HPP
-#define RS274NGC_INTERP_HPP
+#ifndef LINUXCNC_INTERP_DRIVER_HPP
+#define LINUXCNC_INTERP_DRIVER_HPP
 
 #include <functional>
 #include <string>
@@ -46,10 +46,11 @@ typedef std::function<bool()> AbortHandler;
 /// \brief Runs the RS274NGC interpreter inside this process.
 ///
 /// This replaces the stand-alone "rs274" executable that qgcoder used to drive
-/// over a pipe. The NIST interpreter keeps all of its state in file-scope
-/// globals, so only one run can be in flight at a time; interpretFile()
-/// serialises callers on an internal mutex and is safe to call from a worker
-/// thread.
+/// over a pipe. The interpreter is LinuxCNC's, vendored under src/linuxcnc/,
+/// so a file previews here the way it would run on the machine. It keeps its
+/// state in file-scope globals, as does the canon layer, so only one run can
+/// be in flight at a time; interpretFile() serialises callers on an internal
+/// mutex and is safe to call from a worker thread.
 class Interpreter {
 public:
     /// Path of the parameter file (rs274ngc.var) to read at init and rewrite at
@@ -64,7 +65,10 @@ public:
     void setToolTable(const std::string &path) { toolTable = path; }
 
     /// Interpret \a ngcFile, reporting every canonical command to \a onLine.
-    /// \a shouldAbort is polled once per g-code line and may be empty.
+    /// \param ngcFile     the file to read
+    /// \param onLine      called once per canonical command
+    /// \param shouldAbort polled between g-code lines; returning true gives up
+    /// \returns what happened: the canon line count, and either ok or an error
     Result interpretFile(const std::string &ngcFile,
                          const LineHandler &onLine,
                          const AbortHandler &shouldAbort = AbortHandler());
@@ -76,13 +80,15 @@ private:
 
 /// Default parameter file location: rs274ngc.var next to the other application
 /// data, created from the built-in default on first use.
+/// \returns the path to use when setParameterFile() was not called
 std::string defaultParameterFile();
 
 /// Override the directory the default parameter file lives in. qgcoder points
 /// this at QStandardPaths::AppDataLocation; without it the system temp
 /// directory is used.
+/// \param dir the directory to keep the parameter file in
 void setParameterFileDirectory(const std::string &dir);
 
 } // namespace rs274ngc
 
-#endif // RS274NGC_INTERP_HPP
+#endif // LINUXCNC_INTERP_DRIVER_HPP

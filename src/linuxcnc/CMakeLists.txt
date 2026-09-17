@@ -7,6 +7,7 @@
 file(GLOB LINUXCNC_INTERP_SOURCES CONFIGURE_DEPENDS emc/rs274ngc/*.cc)
 add_library(linuxcnc-rs274ngc STATIC
     ${LINUXCNC_INTERP_SOURCES}
+    interp_driver.cpp
     nopython.cc
     emc/ini/inifile.cc
     emc/nml_intf/modal_state.cc
