@@ -428,8 +428,14 @@ int MainWindow::saveInBrowser(const QString &filename)
         return -1;
     }
 
+    // A text file ends with a newline, and the editor's last block has none -
+    // so a file that had one lost it every time it was saved.
+    QString text = ui->gcode->toPlainText();
+    if (!text.isEmpty() && !text.endsWith(u'\n'))
+        text += u'\n';
+
     QTextStream out(&file);
-    out << ui->gcode->toPlainText();
+    out << text;
     file.close();
 
     ui->statusbar->showMessage(tr("Saved %1").arg(filename), 5000);
