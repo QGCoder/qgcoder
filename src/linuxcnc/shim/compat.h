@@ -86,3 +86,67 @@ inline int link(const char *oldpath, const char *newpath)
     return std::fclose(out) == 0 ? 0 : -1;
 }
 #endif // _WIN32
+
+// ---------------------------------------------------------------------------
+// std::from_chars for double
+//
+// interp_read.cc parses every number in a g-code line with std::from_chars.
+// libc++ declares the floating-point overload deleted - it has never
+// implemented it - and Emscripten is pinned to the version Qt's WebAssembly
+// build targets, so it cannot simply be moved forward to one that has it. An
+// overload cannot be added beside a deleted declaration either.
+//
+// So the one call site in interp_read.cc calls this instead. Where the library
+// implements from_chars it is used unchanged; where it does not, strtod stands
+// in. That is sound for this caller and nowhere else: it has already used
+// strspn() to establish that the text is nothing but "+-" followed by digits
+// and dots, so none of what separates the two - leading whitespace, hex, inf,
+// nan - can appear. strtod follows LC_NUMERIC where from_chars does not, and
+// the driver pins that to "C" for the duration of a run.
+// ---------------------------------------------------------------------------
+#include <charconv>
+#include <cerrno>
+#include <cstdlib>
+#include <string>
+#include <system_error>
+
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+
+/// \param first start of the text
+/// \param last  one past its end
+/// \param value set to the parsed number on success
+/// \returns where parsing stopped, and why if it failed
+inline std::from_chars_result qgc_from_chars(const char *first, const char *last,
+                                             double &value)
+{
+    return std::from_chars(first, last, value);
+}
+
+#else
+
+/// \copydoc qgc_from_chars
+inline std::from_chars_result qgc_from_chars(const char *first, const char *last,
+                                             double &value)
+{
+    const std::string text(first, last);
+    char *stopped = nullptr;
+    errno = 0;
+    const double parsed = std::strtod(text.c_str(), &stopped);
+
+    std::from_chars_result result{};
+    if (stopped == text.c_str()) {          // nothing that looked like a number
+        result.ptr = first;
+        result.ec = std::errc::invalid_argument;
+        return result;
+    }
+    result.ptr = first + (stopped - text.c_str());
+    if (errno == ERANGE) {                  // too big or too small for a double
+        result.ec = std::errc::result_out_of_range;
+        return result;
+    }
+    value = parsed;
+    result.ec = std::errc();
+    return result;
+}
+
+#endif

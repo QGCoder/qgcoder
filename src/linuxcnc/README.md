@@ -16,9 +16,33 @@ parser reads. The rest (`emc/nml_intf`, `emc/ini`, `emc/tooldata`,
 `libnml`, `libposemath`, `rtapi`, `hal`) is the header and helper closure
 those need, computed with `g++ -MM` rather than guessed at.
 
-**The upstream sources are unmodified.** Everything qgcoder needs to change to
-build them lives in `shim/` and `nopython.cc`, so moving to a newer LinuxCNC
-is a matter of copying files over the top.
+**The upstream sources are unmodified but for one line.** Everything else
+qgcoder needs to change to build them lives in `shim/` and `nopython.cc`, so
+moving to a newer LinuxCNC is a matter of copying files over the top and
+reapplying that one line.
+
+### The one change
+
+`emc/rs274ngc/interp_read.cc` parses every number in a g-code line with
+`std::from_chars`. libc++ declares the floating-point overload deleted — it has
+never implemented it — and Emscripten is pinned to the version Qt's WebAssembly
+build targets, so it cannot be moved forward to a library that has it. An
+overload cannot be added beside a deleted declaration either, so the shims
+could not reach it.
+
+The call now goes to `qgc_from_chars()` in `shim/compat.h`, which uses
+`std::from_chars` where the library implements it and `strtod` where it does
+not. That substitution is sound for this caller and would not be in general:
+`read_real_number()` has already used `strspn()` to establish that the text is
+nothing but `+-` followed by digits and dots, so none of what separates the two
+— leading whitespace, hex, `inf`, `nan` — can appear. `strtod` follows
+`LC_NUMERIC` where `from_chars` does not, and the driver pins that to `"C"` for
+the duration of a run.
+
+The two were compared directly over the range of inputs `read_real_number()`
+can produce, including the empty string, a lone `.` or `-`, trailing
+characters, and magnitudes that overflow a double: they agree on the parsed
+value, where parsing stopped, and the error code.
 
 ## What was left out, and how
 

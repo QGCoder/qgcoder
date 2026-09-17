@@ -2757,7 +2757,7 @@ int Interp::read_real_number(char *line, //!< string: line of RS274/NGC code bei
   const char *last = start + after;
   double val = 0;
   std::from_chars_result r{first, std::errc::invalid_argument};
-  if (signs <= 1) r = std::from_chars(first, last, val);
+  if (signs <= 1) r = qgc_from_chars(first, last, val);  // shim/compat.h: libc++ has no from_chars for double
 
   if (r.ec != std::errc()) {
     // No number there, or a magnitude that does not fit a double; the stream
