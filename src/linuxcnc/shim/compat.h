@@ -63,6 +63,14 @@ inline char *realpath(const char *path, char *resolved)
 /// \param oldpath the existing file
 /// \param newpath the name to give it as well
 /// \returns 0 on success, -1 on failure
+// Windows spells the reentrant strtok strtok_s(), with the same signature.
+// A macro rather than a function: whether MinGW happens to declare strtok_r
+// varies by version, and redeclaring it would then conflict, while redirecting
+// the name is right either way.
+#ifndef strtok_r
+#  define strtok_r strtok_s
+#endif
+
 inline int link(const char *oldpath, const char *newpath)
 {
     FILE *in = std::fopen(oldpath, "rb");
