@@ -25,6 +25,31 @@
 #  define M_PI_2l 1.570796326794896619231321691639751442L
 #endif
 
+// The interpreter calls basename() on a const char*, which is the GNU
+// flavour - POSIX's takes a char* and would reject the argument. Only glibc
+// declares it, and only out of <string.h>; MinGW, musl (Emscripten) and macOS
+// all leave interp_o_word.cc with an undeclared identifier. Passing a
+// const char* makes this overload the only viable one even where <libgen.h>
+// has declared the POSIX version as well.
+#if !defined(__GLIBC__)
+#  include <cstring>
+
+/// \param path the path to take the last component of
+/// \returns a pointer into \a path, after the last separator
+inline char *basename(const char *path)
+{
+    if (!path || !*path)
+        return const_cast<char *>(".");
+    const char *slash = std::strrchr(path, '/');
+#  ifdef _WIN32
+    const char *backslash = std::strrchr(path, '\\');
+    if (backslash > slash)
+        slash = backslash;
+#  endif
+    return const_cast<char *>(slash ? slash + 1 : path);
+}
+#endif // !__GLIBC__
+
 // Two POSIX calls Windows has no equivalent of. The interpreter uses
 // realpath() to resolve directories named in a machine .ini - which qgcoder
 // never supplies - and link() to keep a backup of the parameter file while it
@@ -34,35 +59,6 @@
 #  include <cstdlib>
 #  include <cstring>
 
-/// The file name at the end of \a path, as POSIX basename() gives it. Windows
-/// has no <libgen.h>. This is the const form: the interpreter only reads the
-/// result, and never expects \a path to be modified.
-/// \param path the path to take the last component of
-/// \returns a pointer into \a path, after the last separator
-inline char *basename(const char *path)
-{
-    if (!path || !*path)
-        return const_cast<char *>(".");
-    const char *slash = std::strrchr(path, '/');
-    const char *backslash = std::strrchr(path, '\\');
-    const char *last = (slash > backslash) ? slash : backslash;
-    return const_cast<char *>(last ? last + 1 : path);
-}
-
-/// Resolve \a path to an absolute one. Windows spells this _fullpath().
-/// \param path the path to resolve
-/// \param resolved buffer of at least PATH_MAX, or NULL to allocate one
-/// \returns the resolved path, or NULL when it does not exist
-inline char *realpath(const char *path, char *resolved)
-{
-    return _fullpath(resolved, path, _MAX_PATH);
-}
-
-/// Make \a newpath another name for \a oldpath. Used only to keep a backup of
-/// the parameter file, so a copy is as good as a hard link.
-/// \param oldpath the existing file
-/// \param newpath the name to give it as well
-/// \returns 0 on success, -1 on failure
 // Windows spells the reentrant strtok strtok_s(), with the same signature.
 // A macro rather than a function: whether MinGW happens to declare strtok_r
 // varies by version, and redeclaring it would then conflict, while redirecting
