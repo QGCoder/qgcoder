@@ -7,7 +7,28 @@
 /// files. A member cannot be shimmed onto someone else's struct, so this
 /// supplies the whole interface over the Win32 find API instead. On the
 /// include path for Windows alone.
+// <windows.h> is a heavy neighbour: it defines ERROR and ABSOLUTE as macros,
+// and LinuxCNC has enum members by both names (EMC_TASK_EXEC::ERROR and
+// DISTANCE_MODE::ABSOLUTE), so including it naively breaks every header that
+// follows in the translation unit. NOGDI drops wingdi.h, which is where both
+// come from; the rest trims what is pulled in and keeps min/max as functions.
+#ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOGDI
+#  define NOGDI
+#endif
+#ifndef NOMINMAX
+#  define NOMINMAX
+#endif
 #include <windows.h>
+
+// Belt and braces: NOGDI is honoured by the Windows SDK and by MinGW, but
+// these two cost nothing to undo and the failure is a wall of syntax errors in
+// unrelated headers.
+#undef ERROR
+#undef ABSOLUTE
+
 #include <cstdlib>
 #include <cstring>
 
