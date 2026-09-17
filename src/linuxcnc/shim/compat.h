@@ -167,12 +167,6 @@ inline int vasprintf(char **strp, const char *fmt, va_list ap)
     return std::vsnprintf(*strp, (size_t)len + 1, fmt, ap);
 }
 
-/// Flush a file's data to disk. _commit() is the Windows equivalent; the
-/// interpreter calls it after rewriting the parameter file.
-/// \param fd the file descriptor to flush
-/// \returns 0 on success, -1 on failure
-inline int fdatasync(int fd) { return _commit(fd); }
-
 /// localtime() for a plain long.
 ///
 /// MinGW's struct timeval carries a 32-bit long tv_sec while time_t is 64-bit,
@@ -252,4 +246,18 @@ inline std::from_chars_result qgc_from_chars(const char *first, const char *last
     return result;
 }
 
+#endif
+
+// fdatasync(), which the interpreter calls after rewriting the parameter file,
+// is a Linux interface. Windows spells it _commit(); macOS has only fsync(),
+// which also flushes the metadata and so does more than asked, not less.
+#if defined(_WIN32)
+#  include <io.h>
+/// \param fd the file descriptor to flush
+/// \returns 0 on success, -1 on failure
+inline int fdatasync(int fd) { return _commit(fd); }
+#elif defined(__APPLE__)
+#  include <unistd.h>
+/// \copydoc fdatasync
+inline int fdatasync(int fd) { return fsync(fd); }
 #endif

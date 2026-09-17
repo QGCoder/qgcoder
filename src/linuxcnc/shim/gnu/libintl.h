@@ -3,14 +3,19 @@
 /// A stand-in for GNU gettext's <libintl.h>.
 ///
 /// The interpreter wraps its diagnostics in _(), which is gettext(), so that
-/// LinuxCNC can translate them. qgcoder ships no message catalogues, and on
-/// Windows the real header is worse than useless: it redefines printf and its
-/// relatives to libintl_printf and friends, which then want -lintl and a
-/// gettext DLL beside the executable. Returning the string unchanged is what
-/// gettext does anyway when no catalogue is loaded.
+/// LinuxCNC can translate them. qgcoder ships no message catalogues.
 ///
-/// On the include path for Windows alone; Linux, macOS and WebAssembly use the
-/// real header, and there the messages can still be translated.
+/// macOS has no gettext at all outside Homebrew, so there the header simply is
+/// not found. On Windows MSYS2 does carry one, and it is worse than useless: it
+/// redefines printf and its relatives to libintl_printf and friends, which then
+/// want -lintl and a gettext DLL beside the executable.
+///
+/// Returning the string unchanged is what gettext does anyway when no catalogue
+/// is loaded.
+///
+/// On the include path for Windows and macOS, neither of which carries gettext
+/// as part of the system. Linux and WebAssembly use the real header, so the
+/// interpreter's messages can still be translated there.
 
 /// \param msgid the message to translate
 /// \returns \a msgid unchanged

@@ -46,11 +46,27 @@ target_compile_definitions(linuxcnc-rs274ngc PUBLIC
     _USE_MATH_DEFINES   # M_PI, which the Windows CRT headers hide by default
 )
 
-# Windows has no <dlfcn.h>; interp_base.cc includes it for a shared-library
-# loader qgcoder never calls. shim/win only goes on the include path there.
+# Windows has no <dlfcn.h>, <spawn.h>, <endian.h> or <wordexp.h>, and its
+# dirent has no d_type; interp_base.cc and interp_o_word.cc want all of them.
+# shim/win only goes on the include path there.
 if(WIN32)
     target_include_directories(linuxcnc-rs274ngc PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/shim/win)
+endif()
+
+# Headers the GNU/Linux toolchain provides and these two do not.
+#
+#   libintl.h  gettext. macOS has none outside Homebrew; MSYS2 has one that
+#              redefines printf and friends to libintl_ equivalents which then
+#              want -lintl and a DLL beside the exe.
+#   endian.h   rtapi_byteorder.h has a branch for FreeBSD and none for macOS,
+#              which keeps the same definitions in <machine/endian.h>, so it
+#              falls through to the glibc include. Windows has no equivalent.
+#
+# Linux and Emscripten have both for real and use them.
+if(WIN32 OR APPLE)
+    target_include_directories(linuxcnc-rs274ngc PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/shim/gnu)
 endif()
 
 # What LinuxCNC's own build hands its sources and they do not include for
