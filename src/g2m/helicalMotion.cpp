@@ -18,6 +18,9 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
+/// \file
+/// \see g2m::helicalMotion
+
 #include <string>
 #include <climits>
 #include <cassert>
@@ -30,11 +33,17 @@
 
 namespace g2m {
 
+/// how close a swept angle has to be to a full turn to count as one
 #define CIRCLE_FUZZ (0.000001) // from libnml/posemath/posemath.h
 
 // example from cds.ngc:
 //     231 N2250  ARC_FEED(3.5884, 1.9116, 3.5000, 2.0000, -1, 1.8437, 0.0000, 0.0000, 0.0000)
 //tok: 0   1      2        3       4       5       6        7  8       9       10      11 
+/// Reads an ARC_FEED canon line and reduces it to a centre, a radius, a
+/// swept angle and a rise, which is all point() needs. The swept angle
+/// carries the direction with it: negative is clockwise.
+/// \param canonL     the ARC_FEED canon line
+/// \param prevStatus machine state this move starts from
 helicalMotion::helicalMotion(std::string canonL, machineStatus prevStatus): canonMotion(canonL,prevStatus) {
     // ( comments relate to XY-plane )
     // see the rs274 spec, www.isd.mel.nist.gov/documents/kramer/RS274NGC_22.pdf or similar
@@ -173,6 +182,8 @@ helicalMotion::helicalMotion(std::string canonL, machineStatus prevStatus): cano
     }*/
 }
 
+/// \returns the length of the helix, |dtheta| * sqrt(radius^2 + c^2) where
+///          c is the rise per radian - a plain arc is the c == 0 case
 double helicalMotion::length() { 
 #ifdef MULTI_AXIS
 	double c = d[Z]/dtheta;
@@ -197,6 +208,9 @@ double helicalMotion::length() {
 #endif
 }
 
+/// \param s distance along the helix, from 0 to length()
+/// \returns the point that far along: the centre-to-start vector rotated by
+///          the angle s corresponds to, plus the rise at that fraction
 Point helicalMotion::point(double s) {
     // 0) relate s to t=[0...1]  and theta=[0...dtheta]
     double t= s/this->length();
@@ -219,6 +233,12 @@ Point helicalMotion::point(double s) {
 }
 
 // rotate by cos/sin. from emc2 gcodemodule.cc
+/// Rotates a vector in place about the origin, given the cosine and sine of
+/// the angle rather than the angle itself - point() already has both.
+/// \param[in,out] x abscissa, replaced by the rotated one
+/// \param[in,out] y ordinate, replaced by the rotated one
+/// \param c cosine of the angle to turn through
+/// \param s sine of the angle to turn through
 void helicalMotion::rotate(double &x, double &y, double c, double s) {
     double tx = x * c - y * s;
     y = x * s + y * c;
@@ -226,6 +246,9 @@ void helicalMotion::rotate(double &x, double &y, double c, double s) {
 }
 
 #ifdef MULTI_AXIS
+/// \param s distance along the helix, from 0 to length()
+/// \returns the rotary axis positions that far along, interpolated linearly
+/// \note MULTI_AXIS builds only
 Point helicalMotion::angle(double s) {
     double t= s/this->length();
     assert( t >= 0.0);  assert( t <= 1.0 + CALC_TOLERANCE );

@@ -17,6 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// \see g2m::canonLine
+
 #include <cmath>
 #include <limits.h>
 #include <stdio.h>
@@ -34,6 +37,8 @@
 namespace g2m {
 
 /// note, the constructor is protected!
+/// \param canonL     the canon line this object stands for
+/// \param prevStatus machine state the previous line left behind
 canonLine::canonLine(std::string canonL, machineStatus prevStatus): myLine(canonL), status(prevStatus) {                       
   tokenize(myLine,canonTokens);
 }
@@ -73,7 +78,8 @@ int canonLine::tok2i(unsigned int n,unsigned int offset) {
   return i;
 }
 
-/// return the n:th canon-token
+/// \param n which token to fetch, counting from zero
+/// \returns that token, or an empty string when the line is too short
 std::string canonLine::cantok(unsigned int n) {
   if (n < canonTokens.size()) {
     return canonTokens[n]; 
@@ -84,21 +90,24 @@ std::string canonLine::cantok(unsigned int n) {
   }
 }
 
-///return true if the canonical command for this line matches 'm'
+/// \param m the command name to test for
+/// \returns true when this line's canonical command is \a m
 bool canonLine::cmdMatch(std::string m) {
     if (canonTokens.size() < 3)
         return false;
     return (m.compare(canonTokens[2]) == 0); //compare returns zero for a match
 }
 
-/// return canonTokens[2] 
+/// \returns the canonical command, or "BAD_LINE_NO_CMD" when the line is
+///          too short to carry one
 const std::string canonLine::getCanonicalCommand() {
   if (canonTokens.size() < 3 ) 
     return "BAD_LINE_NO_CMD";
   return canonTokens[2];
 }
 
-///return a line identifier as string: getN() if !=-1, else getLineNum()
+/// \returns a line identifier: the N word number when the g-code line had
+///          one, and the canon line number otherwise
 const std::string canonLine::getLnum() {
   return ((getN()==-1) ? (cantok(0)) : (cantok(1)));
 }

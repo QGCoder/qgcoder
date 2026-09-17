@@ -18,6 +18,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// Straight traverse and feed moves.
+
 #ifndef LINEARMOTION_HH
 #define LINEARMOTION_HH
 
@@ -38,17 +41,21 @@ This class inherits from canonMotion.
 */
 
 class linearMotion: protected canonMotion {
+  /// the factory is the only thing that builds one of these
   friend canonLine* canonLine::canonLineFactory(std::string l, machineStatus s);
   public:
     /// create linear motion
     linearMotion(std::string canonL, machineStatus prevStatus);
+    /// \returns TRAVERSE for a rapid, STRAIGHT_FEED for a cutting move
     MOTION_TYPE getMotionType();
     //std::vector<Point> points(); // points sampled along the motion
     /// return interpolated point along this move, a distance s from the start of the move
     Point point(double s);
     // std::cout << " linear feed: " << start.str() << " to " << end.str() << "\n";
+    /// end of the move, in machine coordinates
     Point end;
 #ifdef MULTI_AXIS
+    /// \param s distance along the move \returns the rotary positions there
     Point angle(double s);
 #endif
     /// return length of this move

@@ -18,6 +18,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/// \file
+/// \see g2m::machineStatus
+
 #include <iostream>
 #include <sstream>
 
@@ -50,7 +53,7 @@ machineStatus::machineStatus(const machineStatus& oldStatus) {
 
 /**
 This constructor is only to be used when initializing the simulation; it would not be useful elsewhere.
-\param initial is the initial pose of the machine, as determined by the interp from the variable file.
+\param initial the initial pose of the machine, as determined by the interp from the variable file.
 \sa machineStatus(machineStatus const& oldStatus)
 */
 machineStatus::machineStatus(Pose initial) {
@@ -60,6 +63,9 @@ machineStatus::machineStatus(Pose initial) {
     setTool(0);
 }
 
+/// As machineStatus(Pose), but with an origin offset already in force.
+/// \param initial    the initial pose of the machine
+/// \param userOrigin the origin offset at the start of the program
 machineStatus::machineStatus(Pose initial, Pose userOrigin) {
     clearAll();
     startPose = endPose = initial;

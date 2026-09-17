@@ -17,6 +17,9 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 **************************************************************************/
+/// \file
+/// A monotonic timer for benchmarking and debugging.
+
 #ifndef NANOTIMER_HH
 #define NANOTIMER_HH
 
@@ -32,6 +35,7 @@ class nanotimer {
     /// time-stamp when start() was called
     std::chrono::steady_clock::time_point begin;
   public:
+    /// The timer does not start until start() is called.
     nanotimer() {}
     /// start the timer()
     void start();

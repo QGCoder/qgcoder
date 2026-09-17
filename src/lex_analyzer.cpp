@@ -19,6 +19,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/// \file
+/// \see lex_analyzer::LexAnalyzer
+
 #include <cmath>
 #include <limits.h>
 #include <stdio.h>
@@ -68,7 +71,9 @@ std::string LexAnalyzer::getToken(unsigned int n) {
   }
 }
 
-///return true if the n:th token matches 'm'
+/// \param m the text to test for
+/// \param n which token to test, counting from zero
+/// \returns true when token \a n is \a m
 bool LexAnalyzer::wordMatch(std::string m, unsigned int n) {
     if (tokens.size() < n+1)
         return false;

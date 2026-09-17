@@ -18,6 +18,9 @@
  *   canonical command to a callback instead of printing it to stdout.
  ***************************************************************************/
 
+/// \file
+/// \see rs274ngc::Interpreter
+
 #include "rs274ngc_interp.hpp"
 
 #include "canon.hh"
@@ -34,8 +37,11 @@
 
 #include <locale.h>
 
+/// the canon layer's tool table, filled in before each run
 extern CANON_TOOL_TABLE _tools[];                 /* in canon_pre.cc */
+/// highest tool slot the canon layer will accept
 extern int _tool_max;                             /* in canon_pre.cc */
+/// where the interpreter reads and rewrites its parameters
 extern char _parameter_file_name[];               /* in canon_pre.cc */
 
 /// where the canonical commands are printed; canon_pre.cc writes through this
@@ -265,6 +271,10 @@ private:
 #endif
 };
 
+/// Builds the message for an interpreter status code, with the offending
+/// line and the call stack the interpreter kept, when it has them.
+/// \param errorCode a status other than RS274NGC_OK
+/// \returns the message to show the user
 std::string errorTextFor(int errorCode)
 {
     char buffer[RS274NGC_TEXT_SIZE];
@@ -448,12 +458,19 @@ int drain(const char *buffer, size_t length, size_t *consumed,
 
 } // namespace
 
+/// Chooses where the interpreter keeps rs274ngc.var. Call it before the
+/// first interpretFile(); the application points it at its own data
+/// directory so the file does not land in the working directory.
+/// \param dir the directory to keep the parameter file in
 void setParameterFileDirectory(const std::string &dir)
 {
     std::lock_guard<std::mutex> lock(g_parameterDirMutex);
     g_parameterDir = dir;
 }
 
+/// \returns the parameter file to use when none was set explicitly - inside
+///          the directory given to setParameterFileDirectory(), or the
+///          temporary directory when that was never called
 std::string defaultParameterFile()
 {
     std::lock_guard<std::mutex> lock(g_parameterDirMutex);
@@ -467,6 +484,21 @@ std::string defaultParameterFile()
     return dir + RS274NGC_PARAMETER_FILE_NAME_DEFAULT;
 }
 
+/// Interprets one file from beginning to end.
+///
+/// This is interpret_from_file() out of the NIST driver with do_next == 2
+/// ("stop on error"), minus the prompts that needed a terminal. Each
+/// canonical command is handed to \a onLine as it is produced rather than
+/// printed, and errors are returned rather than sent to stderr.
+///
+/// The interpreter and the canon layer both keep their state in file-scope
+/// globals, so the call is serialised on a mutex and LC_NUMERIC is pinned to
+/// "C" for its duration - a locale writing 1,5 would truncate every
+/// fractional coordinate.
+/// \param ngcFile     the file to read
+/// \param onLine      called once per canonical command
+/// \param shouldAbort polled between lines; returning true gives up
+/// \returns what happened: the canon line count, and either ok or an error
 Result Interpreter::interpretFile(const std::string &ngcFile,
                                   const LineHandler &onLine,
                                   const AbortHandler &shouldAbort)

@@ -18,6 +18,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// Canon lines that move the tool.
+
 #ifndef CANONMOTION_HH
 #define CANONMOTION_HH
 
@@ -50,18 +53,20 @@ Also, rapid and traverse are used interchangeably, at least in my comments...
 class canonMotion: protected canonLine {
 
   public:
-    /// return type of motion
+    /// \returns what kind of move this is
     virtual MOTION_TYPE getMotionType() {return NOT_DEFINED;}
-    /// return true
+    /// \returns true, always: this command moves the tool
     bool isMotion() {return true;};
-    /// return start
+    /// \returns the start of the move, in machine coordinates
     Point getStart() const {return start;}
-    /// return end
+    /// \returns the end of the move, in machine coordinates
     Point getEnd() const {return end;}
 
   protected:
     /// create canonMotion
+    /// \param canonL the canon line \param prevStatus state to start from
     canonMotion(std::string canonL, machineStatus prevStatus);
+    /// \returns the end pose named by the canon command
     Pose getPoseFromCmd();
     /// start of this move
     Point start;

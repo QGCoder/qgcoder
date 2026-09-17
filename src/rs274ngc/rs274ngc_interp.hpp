@@ -13,6 +13,9 @@
  *   GNU General Public License for more details.                          *
  ***************************************************************************/
 
+/// \file
+/// In-process driver for the embedded NIST RS274NGC interpreter.
+
 #ifndef RS274NGC_INTERP_HPP
 #define RS274NGC_INTERP_HPP
 
@@ -52,10 +55,12 @@ public:
     /// Path of the parameter file (rs274ngc.var) to read at init and rewrite at
     /// exit. If the file does not exist it is created from the built-in
     /// default. When left empty, defaultParameterFile() is used.
+    /// \param path the parameter file to use
     void setParameterFile(const std::string &path) { parameterFile = path; }
 
     /// Path of the tool table to load. An empty path, a missing file, or a file
     /// that cannot be parsed falls back to the built-in default tool table.
+    /// \param path the tool table to load
     void setToolTable(const std::string &path) { toolTable = path; }
 
     /// Interpret \a ngcFile, reporting every canonical command to \a onLine.
@@ -65,8 +70,8 @@ public:
                          const AbortHandler &shouldAbort = AbortHandler());
 
 private:
-    std::string parameterFile;
-    std::string toolTable;
+    std::string parameterFile;  ///< \see setParameterFile()
+    std::string toolTable;      ///< \see setToolTable()
 };
 
 /// Default parameter file location: rs274ngc.var next to the other application

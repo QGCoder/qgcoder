@@ -17,6 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// One line of the interpreter's canonical output.
+
 #ifndef CANONLINE_HH
 #define CANONLINE_HH
 
@@ -44,35 +47,42 @@ You cannot create objects of this class - instead, create an object of a class
 class canonLine {
 
   public:
-    /// return the canon-line as a string
+    /// \returns the canon line as a string
     const std::string getLine() { return myLine; };
-    /// return Pose at start of this move
+    /// \returns the pose at the start of this move
     const Pose getStart() { return status.getStartPose(); };
-    /// return the Pose at end of this move
+    /// \returns the pose at the end of this move
     const Pose getEnd() { return status.getEndPose(); };
+    /// \returns the N word number of the g-code line, or -1 when it has none
     int getN(); 
-    ///returns the canon line number
+    /// \returns the canon line number
     int getLineNum() { return tok2i(0); }
     //const std::string getCanonType();
-    /// returns the machine's status after execution of this canon line
+    /// \returns the machine status after this canon line has run
     const machineStatus* getStatus() { return &status; }
-    /// return type of motion
+    /// \returns what kind of move this is
     virtual MOTION_TYPE getMotionType() { return NOT_DEFINED; } //= 0;
-    /// return false for motion
+    /// \returns true when this command moves the tool
     virtual bool isMotion() { return false; }
-    /// return true if this is the end of the nc-program
+    /// \returns true when this command ends the program
     virtual bool isNCend() { return false; }
-    /// return length of the motion
+    /// \returns the length of the move; the base class has none
     virtual double length() { assert(0); return -1; }
 
+/// marks a parameter as deliberately unused, without a compiler warning
 #define UNUSED(x) (void)(x)
     
-    /// return interpolated point at position t along the motion
+    /// \param t distance along the move \returns the point that far along
     virtual Point point(double t) { UNUSED(t); assert(0); return Point(); }
 #ifdef MULTI_AXIS
+    /// \param t distance along the move \returns the rotary positions there
+    /// \note MULTI_AXIS builds only
     virtual Point angle(double t) { UNUSED(t); assert(0); return Point(); }
 #endif
     // produce a canonLine based on string l, and previous machineStatus s
+    /// Builds the right kind of canonLine for a canon command.
+    /// \param l the canon line \param s state the previous line left behind
+    /// \returns a new canonLine; the caller owns it
     static canonLine* canonLineFactory (std::string l, machineStatus s);
     
     std::string cantok(unsigned int n);

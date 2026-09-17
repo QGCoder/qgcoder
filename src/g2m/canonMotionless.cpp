@@ -17,6 +17,9 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
+/// \file
+/// \see g2m::canonMotionless
+
 #include "canonMotionless.hpp"
 #include "machineStatus.hpp"
 

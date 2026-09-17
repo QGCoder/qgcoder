@@ -1,3 +1,6 @@
+/// \file
+/// Program entry point: command line, OpenGL format and the main window.
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
@@ -20,6 +23,11 @@ constexpr auto kAppVersion = "0.1.42";
 constexpr auto kAppName = "gcoder";
 constexpr auto kAppOrganization = "gcoder.koppi.github.com";
 
+/// Sends Qt's own messages to stderr, dropping the QSocketNotifier warnings
+/// that the interpreter's pipes used to provoke.
+/// \param type    severity, unused - everything is printed the same way
+/// \param context where the message came from, unused
+/// \param msg     the message
 void customMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     Q_UNUSED(type)
@@ -43,6 +51,13 @@ bool wantsGuiLess(int argc, char **argv)
 
 } // namespace
 
+/// Builds a QCoreApplication for --help and --version and a QApplication
+/// otherwise, requests the OpenGL context the 3D view needs before the first
+/// one is created, points the interpreter at a writable parameter directory
+/// and shows the window.
+/// \param argc argument count
+/// \param argv arguments; the first positional one is the file to open
+/// \returns the Qt exit code
 int main(int argc, char **argv)
 {
     qRegisterMetaType<QVector<g2m::canonLine *>>("QVector<g2m::canonLine*>");

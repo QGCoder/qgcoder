@@ -1,3 +1,6 @@
+/// \file
+/// \see MainWindow
+
 #include "mainwin.h"
 #include "ui_mainwin.h"
 
@@ -86,6 +89,8 @@ MainWindow::~MainWindow()
     }
 }
 
+/// Wires the menu, the worker and the command process to their slots. Called
+/// once from the constructor.
 void MainWindow::setupConnections()
 {
     connect(ui->gcode, &QPlainTextEdit::textChanged, this, &MainWindow::changedGcode);
@@ -127,6 +132,9 @@ void MainWindow::setupConnections()
 #endif
 }
 
+/// Creates the interpreter worker and moves it onto its own thread, so a long
+/// interpretation never blocks the window. Everything crossing the boundary
+/// goes through queued connections.
 void MainWindow::createG2mWorker()
 {
 #if QT_CONFIG(thread)
@@ -174,11 +182,14 @@ void MainWindow::createG2mWorker()
 // view
 // ---------------------------------------------------------------------------
 
+/// Follows the menu item: with auto-zoom on, the view reframes itself
+/// whenever the tool path changes.
 void MainWindow::toggleAutoZoom()
 {
     view->setAutoZoom(ui->action_AutoZoom->isChecked());
 }
 
+/// Follows the menu item between maximised and normal.
 void MainWindow::toggleFullScreen()
 {
     if (ui->action_showFullScreen->isChecked())
@@ -187,18 +198,22 @@ void MainWindow::toggleFullScreen()
         showNormal();
 }
 
+/// Makes the text panes one point larger.
 void MainWindow::zoomIn()
 {
     ++fontSize;
     applyFontSize();
 }
 
+/// Makes the text panes one point smaller, stopping at 1pt.
 void MainWindow::zoomOut()
 {
     fontSize = qMax(1, fontSize - 1);
     applyFontSize();
 }
 
+/// Re-applies the window style sheet, which carries the current font size
+/// along with the colour scheme.
 void MainWindow::applyFontSize()
 {
     setStyleSheet(u"QWidget { font-size: %1pt; font-family: \"Courier\"; "
@@ -210,6 +225,8 @@ void MainWindow::applyFontSize()
 // the command pane
 // ---------------------------------------------------------------------------
 
+/// The command pane was edited: there is no longer a file behind the editor,
+/// so forget it and re-run the pipeline.
 void MainWindow::changedCommand()
 {
     openFile.clear();
@@ -245,6 +262,8 @@ void MainWindow::runCommand()
 // the g-code pane
 // ---------------------------------------------------------------------------
 
+/// The g-code pane was edited: write it to the scratch file and ask the
+/// worker to interpret it again. Does nothing while a file is being loaded.
 void MainWindow::changedGcode()
 {
     // openInBrowser() fires textChanged as it fills the editor, and
@@ -274,6 +293,8 @@ void MainWindow::changedGcode()
     emit interpret();
 }
 
+/// Opens the file named on the command line, or under Emscripten the sample
+/// compiled into the resources, since a browser has no command line.
 void MainWindow::loadGCodeFile()
 {
 #ifdef Q_OS_WASM
@@ -298,6 +319,9 @@ void MainWindow::loadGCodeFile()
         openInBrowser(openFile);
 }
 
+/// File / Open. The desktop build asks for a path; the browser build takes
+/// the contents from the browser's own dialog and drops them into the
+/// in-memory file system first.
 void MainWindow::onOpenFile()
 {
 #ifdef Q_OS_WASM
@@ -333,6 +357,9 @@ void MainWindow::onOpenFile()
 #endif
 }
 
+/// Copies a file to the scratch file the interpreter reads and starts a run.
+/// \param filename the g-code file to interpret
+/// \returns 0 when the run was started, -1 when either file could not be opened
 int MainWindow::openInViewer(const QString &filename)
 {
     QFile fin(filename);
@@ -359,6 +386,8 @@ int MainWindow::openInViewer(const QString &filename)
     return 0;
 }
 
+/// Loads a file into the editor pane and adopts it as the open one.
+/// \param filename the file to read
 void MainWindow::openInBrowser(const QString &filename)
 {
     QFile file(filename);
@@ -416,6 +445,8 @@ void MainWindow::onSave()
 #endif
 }
 
+/// File / Save As. The desktop build asks where to write; the browser build
+/// hands the bytes to the download machinery under a suggested name.
 void MainWindow::onSaveAs()
 {
 #ifdef Q_OS_WASM
@@ -432,6 +463,10 @@ void MainWindow::onSaveAs()
 #endif
 }
 
+/// Writes the editor pane to a file and adopts it as the open one, so the
+/// title, the save actions and the next plain save all follow.
+/// \param filename where to write
+/// \returns 0 on success, -1 when the file could not be opened
 int MainWindow::saveInBrowser(const QString &filename)
 {
     QFile file(filename);
@@ -479,6 +514,9 @@ void MainWindow::updateSaveActions()
 // settings
 // ---------------------------------------------------------------------------
 
+/// Restores geometry, the view options, the font size and the two paths.
+/// A fresh install has neither path set; rather than block on the settings
+/// dialog at every start, a scratch file and the stock tool table are used.
 void MainWindow::loadSettings()
 {
     settings.beginGroup(u"gui"_s);
@@ -516,6 +554,7 @@ void MainWindow::loadSettings()
         tooltable = defaultToolTable();
 }
 
+/// Restores the command pane's contents, falling back to an example pipeline.
 void MainWindow::loadSettingsCommand()
 {
     settings.beginGroup(u"gui"_s);
@@ -524,6 +563,8 @@ void MainWindow::loadSettingsCommand()
     settings.endGroup();
 }
 
+/// Writes geometry, the view options, the font size, the two paths and the
+/// command pane back to QSettings.
 void MainWindow::saveSettings()
 {
     settings.beginGroup(u"gui"_s);
@@ -551,6 +592,7 @@ void MainWindow::saveSettings()
 /// is left alone (a user-edited default table should survive); an empty return
 /// means it could not be created, and the interpreter falls back to its own
 /// built-in copy of the same tools.
+/// \returns the path to the tool table, or an empty string on failure
 QString MainWindow::defaultToolTable()
 {
     static const char *const lines[] = {
@@ -577,6 +619,10 @@ QString MainWindow::defaultToolTable()
     return path;
 }
 
+/// Shows the settings dialog and takes the two paths from it if accepted.
+/// The browser build has no nested event loop to run it in, so it opens the
+/// dialog and collects the values from its accepted signal instead.
+/// \returns 0 once a scratch g-code file is set, 1 while it is still empty
 int MainWindow::onSettings()
 {
 #ifdef Q_OS_WASM
@@ -603,6 +649,8 @@ int MainWindow::onSettings()
     return gcodefile.isEmpty() ? 1 : 0;
 }
 
+/// Saves the settings on the way out.
+/// \param event the close event, passed on to QMainWindow
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     saveSettings();
@@ -613,21 +661,25 @@ void MainWindow::closeEvent(QCloseEvent *event)
 // misc
 // ---------------------------------------------------------------------------
 
+/// Opens the project's issue tracker in the browser.
 void MainWindow::helpIssues()
 {
     QDesktopServices::openUrl(QUrl(u"https://github.com/QGCoder/qgcoder/issues"_s));
 }
 
+/// Opens the project's chat room in the browser.
 void MainWindow::helpChat()
 {
     QDesktopServices::openUrl(QUrl(u"https://gitter.im/QGCoder/qgcoder"_s));
 }
 
+/// Shows the busy indicator while an interpretation is running.
 void MainWindow::showProgressBar()
 {
     progressBar->show();
 }
 
+/// Hides the busy indicator once the run has finished.
 void MainWindow::hideProgressBar()
 {
     progressBar->hide();

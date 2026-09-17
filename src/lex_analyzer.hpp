@@ -18,6 +18,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// Splits a canon line into tokens.
+
 #ifndef LEX_ANALIZER_HH
 #define LEX_ANALIZER_HH
 
@@ -42,12 +45,14 @@ You cannot create objects of this class - instead, create an object of a class
 class LexAnalyzer {
 
   public:
+	/// \param line the canon line to split into tokens
 	LexAnalyzer(std::string line): myLine(line) {
 	  tokenize(myLine, tokens);
 	}
-    /// return the line as a string
+    /// \returns the line as a string
     const std::string getLine() { return myLine; };
-    /// return the n:th token
+    /// \param n which token to fetch, counting from zero
+    /// \returns that token, or an empty string when the line is too short
     std::string getToken(unsigned int n);
 
     // keyword matching

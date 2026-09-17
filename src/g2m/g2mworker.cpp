@@ -1,3 +1,6 @@
+/// \file
+/// \see g2m::G2mWorker
+
 #include "g2mworker.h"
 
 #include <iostream>
@@ -6,6 +9,13 @@
 
 namespace g2m {
 
+/// Runs one interpretation from start to finish on the worker thread.
+///
+/// A .canon file is already the interpreter's output and is read straight
+/// through; a .ngc file is copied to a temporary file first, one line at a
+/// time with a comment carrying the source line number inserted after each,
+/// which is what lets a canon line be traced back to the g-code that
+/// produced it. Anything else is rejected.
 void G2mWorker::interpret_file_async() {
     interrupted = false;
     nanotimer timer;
@@ -72,6 +82,8 @@ void G2mWorker::interpret_file_async() {
 
 /// The interpreter falls back to its own built-in tool table, so an unset or
 /// missing tool table is not an error - it just means "use the default".
+/// \returns the tool table to hand the interpreter, or an empty string to
+///          let it fall back on its built-in default
 QString G2mWorker::toolTablePath() {
     if (tooltable.isEmpty())
         return QString();
@@ -84,6 +96,14 @@ QString G2mWorker::toolTablePath() {
 
 /// Run the embedded rs274ngc interpreter over tempFile and turn every
 /// canonical command it produces into a canonLine.
+/// Feeds one prepared file through the interpreter and turns what comes back
+/// into canonLine objects.
+///
+/// Every canon line is emitted as it appears so the view can fill in while
+/// the run is still going, and the whole vector is emitted at the end.
+/// Aborting leaves both signals unsent - the caller asked to stop, so the
+/// partial result is not worth delivering.
+/// \param tempFile the file to interpret
 void G2mWorker::interpret(QString tempFile) {
     rs274ngc::Interpreter interp;
     interp.setToolTable(toolTablePath().toStdString());
@@ -134,6 +154,10 @@ void G2mWorker::interpret(QString tempFile) {
     emit debugMessage( tr("g2m: read %1 lines of g-code which produced %2 canon-lines.").arg(gcode_lines).arg(lineVector.size()) );
 }
 
+/// Turns one canon line into a canonLine, chaining the machine state on from
+/// the previous one so each move knows where it starts.
+/// \param l the canon line, newline terminated
+/// \returns true once the end of the program has been seen
 bool G2mWorker::processCanonLine(std::string l) {
     canonLine* cl;
     if (lineVector.size() == 0) {
@@ -154,6 +178,8 @@ bool G2mWorker::processCanonLine(std::string l) {
     return false;
 }
 
+/// Reports a message that is not tied to a signal, on stdout.
+/// \param s the message
 void G2mWorker::infoMsg(std::string s) {
     std::cout << s << std::endl;
 }

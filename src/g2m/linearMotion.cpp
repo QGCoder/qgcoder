@@ -18,6 +18,9 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
+/// \file
+/// \see g2m::linearMotion
+
 #include "calc_tolerance.hpp"
 
 #include "linearMotion.hpp"
@@ -31,6 +34,11 @@
 
 namespace g2m {
 
+/// Takes the end pose out of the canon command and works out the two
+/// endpoints in machine coordinates, i.e. with the current origin offset
+/// already added in.
+/// \param canonL     the STRAIGHT_TRAVERSE / STRAIGHT_FEED canon line
+/// \param prevStatus machine state this move starts from
 linearMotion::linearMotion(std::string canonL, machineStatus prevStatus): canonMotion(canonL,prevStatus) {
   status.setMotionType(getMotionType());
   status.setEndPose(getPoseFromCmd());
@@ -50,6 +58,9 @@ linearMotion::linearMotion(std::string canonL, machineStatus prevStatus): canonM
 #endif
 }
 
+/// \param s distance along the move, from 0 to length()
+/// \returns the point that far along the straight line from start to end;
+///          the start point for a zero-length move
 Point linearMotion::point(double s) {
     if ( length() == 0.0 ) {
         return start;
@@ -62,6 +73,9 @@ Point linearMotion::point(double s) {
     }
 }
 
+/// \returns the distance travelled. With MULTI_AXIS the rotary travel is
+///          scaled by the larger of the two radii and the longer of the two
+///          wins, so a pure rotation still has a length to interpolate over.
 double linearMotion::length() {
 #ifdef MULTI_AXIS
 	double llinear = start.Distance(end);
@@ -77,6 +91,10 @@ double linearMotion::length() {
 }
 
 #ifdef MULTI_AXIS
+/// \param s distance along the move, from 0 to length()
+/// \returns the rotary axis positions that far along; the starting ones for
+///          a zero-length move
+/// \note MULTI_AXIS builds only
 Point linearMotion::angle(double s) {
     if ( length() == 0.0 ) {
         return startDir;
@@ -91,6 +109,7 @@ Point linearMotion::angle(double s) {
 #endif
 
 //need to return RAPID for rapids...
+/// \returns TRAVERSE for a rapid, STRAIGHT_FEED for a cutting move
 MOTION_TYPE linearMotion::getMotionType() {
   bool traverse = cmdMatch("STRAIGHT_TRAVERSE");
   if (traverse) {

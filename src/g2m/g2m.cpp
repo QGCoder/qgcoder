@@ -20,6 +20,9 @@
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.              *
 ***************************************************************************/
 
+/// \file
+/// \see g2m::g2m
+
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -37,6 +40,8 @@
 
 namespace g2m {
 
+/// Checks the file is one we can interpret, then runs it.
+/// \see interpret_file_async()
 void g2m::interpret_file() {
     if (file.isEmpty() || (!file.endsWith(".ngc") && !file.endsWith(".canon"))) {
         infoMsg("No valid g-code file to interpret");
@@ -46,6 +51,8 @@ void g2m::interpret_file() {
     interpret_file_async();
 }
 
+/// Prepares the file and runs it through the interpreter, turning the
+/// canonical output into canonLine objects as it arrives.
 void g2m::interpret_file_async() {
     nanotimer timer;
     timer.start();
@@ -112,6 +119,9 @@ void g2m::interpret_file_async() {
 
 /// The interpreter falls back to its own built-in tool table, so an unset or
 /// missing tool table is not an error - it just means "use the default".
+/// \returns the tool table to hand the interpreter, or an empty string to
+///          let it fall back on its built-in default. A path that does not
+///          exist is reported and treated as empty rather than failing.
 QString g2m::toolTablePath() {
   if (tooltable.isEmpty())
     return QString();
@@ -124,6 +134,8 @@ QString g2m::toolTablePath() {
 
 /// process a canon-line input string. this is a canon-string from rs274.
 /// call canonLineFactory to produce a canonLine and save it to lineVector
+/// \param l the canon line, newline terminated
+/// \returns true once the end of the program has been seen
 bool g2m::processCanonLine(std::string l) {
     canonLine* cl;
     if (lineVector.size() == 0) {
@@ -151,12 +163,14 @@ bool g2m::processCanonLine(std::string l) {
 }
 
 /// output information to std::cout
+/// \param s the message
 void g2m::infoMsg(std::string s) {
     std::cout << s << std::endl;
 }
 
 /// Run the embedded rs274ngc interpreter over tempFile and turn every
 /// canonical command it produces into a canonLine.
+/// \param tempFile the prepared file to interpret
 void g2m::interpret(QString tempFile) {
     rs274ngc::Interpreter interp;
     interp.setToolTable(toolTablePath().toStdString());

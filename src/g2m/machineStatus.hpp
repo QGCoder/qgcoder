@@ -17,6 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// The machine state carried from one canon line to the next.
+
 #ifndef MACHINESTATUS_HH
 #define MACHINESTATUS_HH
 
@@ -55,59 +58,67 @@ Important: 'pose' refers to how the machine's axes are positioned,
 */
 class machineStatus {
   public:
+    /// Chains on from the previous move: this move's start is that move's end.
+    /// \param oldStatus the state the previous move left behind
     machineStatus(machineStatus const& oldStatus);
+    /// start of the program, from the interpreter's variable file
     machineStatus(Pose initial);
+    /// start of the program, with an origin offset already in force
     machineStatus(Pose initial, Pose userOrigin);
+    /// \param m what kind of move this is
     void setMotionType(MOTION_TYPE m);
+    /// \param newPose where this move ends up
     void setEndPose(Pose newPose);
     /// set endPose
+    /// \param p where this move ends up, direction unchanged
     void setEndPose(Point p);
-    /// set current feedrate
+    /// set current feedrate \param f the new feed rate
     void setFeed(const double f) { F = f; };
-    /// set spindle speed
+    /// set spindle speed \param s the new speed
     void setSpindleSpeed(const double s) { S = s; };
-    /// set spindle status
+    /// set spindle status \param s the new status
     void setSpindleStatus(const SPINDLE_STATUS s) { spindleStat = s; };
-    /// set coolant status
+    /// set coolant status \param c the new coolant state
     void setCoolant(coolantStruct c) { coolant = c; };
-    /// set the current plane
+    /// set the current plane \param p the new plane
     void setPlane(CANON_PLANE p) { plane = p; };
-    /// set the current origin
+    /// set the current origin \param newOrigin the new origin offset
     void setOrigin(Pose newOrigin) { origin = newOrigin; };
-    /// return the current feedrate
+    /// \returns the current feedrate
     double getFeed() const { return F; };
-    /// return spindle speed
+    /// \returns the spindle speed
     double getSpindleSpeed() const { return S; };
-    /// return the spindle-status structure
+    /// \returns the spindle status
     SPINDLE_STATUS getSpindleStatus() const { return spindleStat; };
-    /// return the coolant structure
+    /// \returns the coolant state
     const coolantStruct getCoolant() { return coolant; };
-    /// return startPose
+    /// \returns the machine pose this move starts from
     const Pose getStartPose() { return startPose; };
-    /// return endPose
+    /// \returns the machine pose this move ends at
     const Pose getEndPose() { return endPose; };
-    /// return the current plane
+    /// \returns the current plane
     CANON_PLANE getPlane() const { return plane; };
-    /// return the current origin
+    /// \returns the current origin offset
     Pose getOrigin() const { return origin; };
-    /// set startDir
+    /// set startDir \param d direction this move sets off in
     void setStartDir( Point d) { startDir = d; };
-    /// return startDir
+    /// \returns the direction this move sets off in
     const Point getStartDir() const { return startDir; };
-    /// set endDir
+    /// set endDir \param d direction this move arrives on
     void setEndDir( Point d) { endDir = d; };
-    /// return endDir
+    /// \returns the direction this move arrives on
     const Point getEndDir() const { return endDir; };
-    /// return prevEndDir
+    /// \returns the direction the previous move arrived on
     const Point getPrevEndDir() const { return prevEndDir; };
+    /// Resets every field to its default, as at the start of a program.
     void clearAll(void);
-    /// return first
+    /// \returns true while this is the first move of the program
     bool isFirst() { return first; };
-    /// set the tool index
+    /// set the tool index \param n ID of the tool to be used
     void setTool(int n); //n is the ID of the tool to be used.
-    /// return the current tool index
+    /// \returns the current tool index
     int  getTool() const { return myTool; };
-    /// return the current spindle status & motion type
+    /// \returns spindle status and motion type, or-ed together
     int  getSpindleMotionStatus() const { return static_cast<int>(spindleStat) | static_cast<int>(motionType); }
 
   protected:

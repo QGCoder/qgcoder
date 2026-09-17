@@ -19,6 +19,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/// \file
+/// Arc and helix moves.
+
 #ifndef HELICALMOTION_HH
 #define HELICALMOTION_HH
 
@@ -41,6 +44,7 @@ This class handles both planar arcs and helical arcs. Inherits from canonMotion.
 */
 
 class helicalMotion: protected canonMotion {
+  /// the factory is the only thing that builds one of these
   friend canonLine* canonLine::canonLineFactory(std::string l, machineStatus s);
 
   public:
@@ -59,18 +63,26 @@ class helicalMotion: protected canonMotion {
     void rotate(double &x, double &y, double c, double s);
     
 // DATA, this corresponds to the "tokens" on the ARC_FEED canon-line
-    double x1,y1,z1; // endpoint for this move
-    double a,b,c;    // abc axis endpoints
-    double rot;      // rotation for this move
-    double cx,cy;    // center-point for this move
+    double x1;       ///< endpoint of this move, abscissa
+    double y1;       ///< endpoint of this move, ordinate
+    double z1;       ///< endpoint of this move, applicate
+    double a;        ///< A axis endpoint
+    double b;        ///< B axis endpoint
+    double c;        ///< C axis endpoint
+    double rot;      ///< how many full turns the move makes
+    double cx;       ///< centre of the arc, abscissa
+    double cy;       ///< centre of the arc, ordinate
 
 // these are the parameters calculated from the canon-params x1,y1,z1,a,b,c,rot,cx,cy
-    unsigned int X, Y, Z; // for shuffling around coordinate-indexes
-    double d[6]; // 6-axis delta for this move, applies to linear interpolation
-    double o[6]; // o=origin/start-point
-    double dtheta; // change in angle for this move
-    double tx,ty; // vector from start to center
-    double radius;
+    unsigned int X;  ///< index of the first axis of the active plane
+    unsigned int Y;  ///< index of the second
+    unsigned int Z;  ///< index of the axis the helix rises along
+    double d[6]; ///< 6-axis delta for this move, for linear interpolation
+    double o[6]; ///< origin, i.e. the start point of the move
+    double dtheta; ///< angle swept by this move; negative is clockwise
+    double tx;     ///< vector from the centre to the start point, abscissa
+    double ty;     ///< and its ordinate
+    double radius; ///< radius of the arc
 };
 
 } // end namespace 

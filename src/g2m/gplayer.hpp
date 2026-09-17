@@ -2,6 +2,9 @@
  *  Modification & Copyright 2015      Kazuyasu Hamada (k-hamada@gifu-u.ac.jp)
 */
 
+/// \file
+/// Steps through a finished tool path, for animation.
+
 #ifndef GPLAYER_HH
 #define GPLAYER_HH
 
@@ -17,15 +20,25 @@
 #include "canonLine.hpp"
 #include "nanotimer.hpp"
 
+/// distance between samples along a move, in machine units
 #define DEFAULT_STEP_SIZE (0.1)
+/// feed rate assumed when the program does not set one
 #define DEFAULT_FEED_RATE       (200.0)
+/// rate rapids are played back at
 #define DEFAULT_TRAVERSE_FEED_RATE      (1000.0)
+/// how close two positions have to be before they count as the same
 #define TOLERANCE       (1e-2)
+/// milliseconds between animation steps
 #define DEFAULT_ANIMATE_INTERVAL        (3)
 
 namespace g2m {
 
-enum PLUNGE_STATUS { NO_PLUNGE = 0x0, POSITIVE_PLUNGE = 0x10000, NEGATIVE_PLUNGE = 0x20000, };
+/// whether a move goes into the work, and which way
+enum PLUNGE_STATUS {
+    NO_PLUNGE = 0x0,            ///< no motion along the tool axis
+    POSITIVE_PLUNGE = 0x10000,  ///< retracting
+    NEGATIVE_PLUNGE = 0x20000,  ///< plunging into the work
+};
 
 /**
 \class GPlayer
@@ -35,6 +48,7 @@ class GPlayer : public QObject {
     Q_OBJECT;
 
     public:
+        /// Sets the step size, feed rates and interval to their defaults.
         GPlayer()  {  
             first = true;
             current_line = 0;
@@ -47,16 +61,20 @@ class GPlayer : public QObject {
             total_time = 0.0;
         }
 
+        /// \param ds distance between samples; ignored when not positive
         void setStepSize(double ds) {
         	if (ds > 0.0)
         		inv_ds = 1.0 / ds;
         }
 
+        /// \param rate rate to play rapids back at; ignored when not positive
         void setTraverseFeedRate(double rate) {
         	if (rate > 0.0)
         		traverse_feed_rate = rate;
         }
 
+        /// \param line index into the program
+        /// \returns that canon line; the index is not checked
         canonLine* getCanonLine(unsigned int line) { return lines[line]; }
 
     public slots:
@@ -184,24 +202,28 @@ class GPlayer : public QObject {
         unsigned int current_line;
         /// loop variable
         int    m;
+        /// length of the move being played
         double move_length;
+        /// how many samples that move is split into
         int    n_samples;
+        /// distance between those samples
         double interval_size;
         /// flag indicating when current move done
         bool move_done;
         /// vector of canonLines to process
         std::vector<canonLine*> lines;
 
+        /// true while the program is playing
         bool play_flag;
 
     private:
-        int    plunge;
-        int    motionStatus;
-        double inv_ds;
-		double feed_rate;
-		double traverse_feed_rate;
-        double total_length;
-		double total_time;
+        int    plunge;             ///< PLUNGE_STATUS of the current move
+        int    motionStatus;       ///< spindle status and motion type, or-ed
+        double inv_ds;             ///< reciprocal of the sample step size
+		double feed_rate;          ///< feed rate moves are played back at
+		double traverse_feed_rate; ///< rate rapids are played back at
+        double total_length;       ///< length of the whole program
+		double total_time;         ///< how long playing it takes
 };
 
 } // end namespace

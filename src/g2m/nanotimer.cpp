@@ -18,6 +18,9 @@
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 **************************************************************************/
 
+/// \file
+/// \see g2m::nanotimer
+
 #include "nanotimer.hpp"
 
 // This used to call clock_gettime(CLOCK_MONOTONIC_RAW), which does not exist
@@ -26,20 +29,29 @@
 
 namespace g2m {
 
+/// Records the reference point every later reading is measured from.
 void nanotimer::start() {
   begin = std::chrono::steady_clock::now();
 }
 
+/// \returns nanoseconds since the last start()
+/// \note long long, not long: long is 32 bits on Windows, which would wrap
+///       after about two seconds.
 long long nanotimer::getElapsed(){
   const auto delta = std::chrono::steady_clock::now() - begin;
   return std::chrono::duration_cast<std::chrono::nanoseconds>(delta).count();
 }
 
+/// \returns seconds since the last start()
 double nanotimer::getElapsedS(){
   const auto delta = std::chrono::steady_clock::now() - begin;
   return std::chrono::duration<double>(delta).count();
 }
 
+/// Renders a duration with the unit that keeps it readable: minutes and
+/// seconds above a minute, then seconds, milliseconds or microseconds.
+/// \param s the duration, in seconds
+/// \returns the duration as text, e.g. "1m, 3.2 s" or "450 us"
 QString nanotimer::humanreadable(double s) {
   QString out;
   if (s > 60) {

@@ -1,3 +1,6 @@
+/// \file
+/// \see SettingsDialog
+
 #include "settings_dlg.h"
 
 #include <QAbstractButton>
@@ -6,6 +9,8 @@
 
 using namespace Qt::StringLiterals;
 
+/// Builds the dialog from settings.ui and wires the four buttons up. Under
+/// Emscripten the two browse buttons are hidden rather than connected.
 SettingsDialog::SettingsDialog(QWidget *parent, const QString &homedir)
     : QDialog(parent)
     , home_dir(homedir)
@@ -27,6 +32,8 @@ SettingsDialog::SettingsDialog(QWidget *parent, const QString &homedir)
     connect(pushButton, &QAbstractButton::clicked, this, &QDialog::reject);
 }
 
+/// Seeds both members and both line edits, so that cancelling the dialog
+/// leaves the caller's values untouched.
 void SettingsDialog::setValues(const QString &tbl, const QString &gcode)
 {
     tooltable = tbl;
@@ -35,6 +42,9 @@ void SettingsDialog::setValues(const QString &tbl, const QString &gcode)
     le_path3->setText(gcodefile);
 }
 
+/// Opens the file dialog at the current path if there is one, and otherwise at
+/// the machinekit config directory for the tool table or the temporary
+/// directory for the g-code file. Cancelling leaves the line edit alone.
 void SettingsDialog::onFileBrowse(int buttonNumber)
 {
     const QDir dir;
@@ -56,6 +66,7 @@ void SettingsDialog::onFileBrowse(int buttonNumber)
         le_path3->setText(filename);
 }
 
+/// Takes the text of both line edits as the result and closes the dialog.
 void SettingsDialog::onAccept()
 {
     tooltable = le_path2->text();

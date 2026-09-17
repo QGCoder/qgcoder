@@ -1,3 +1,6 @@
+/// \file
+/// The 3D tool-path view.
+
 #ifndef VIEW_H
 #define VIEW_H
 
@@ -51,17 +54,24 @@ class View : public QOpenGLWidget, protected QOpenGLExtraFunctions
 #endif
 {
     Q_OBJECT
+    /// whether the view reframes itself whenever the tool path changes
     Q_PROPERTY(bool autoZoom READ autoZoom WRITE setAutoZoom RESET unsetAutoZoom NOTIFY autoZoomChanged)
 
 public:
+    /// \param parent widget parent
     explicit View(QWidget *parent = nullptr);
+    /// Releases the GPU resources, if the context has not already gone.
     ~View() override;
 
+    /// \returns true while the view reframes itself on every change
     [[nodiscard]] bool autoZoom() const { return m_autoZoom; }
     void setAutoZoom(bool autoZoom);
+    /// Restores auto-zoom to its default, which is on.
     void unsetAutoZoom() { setAutoZoom(true); }
 
+    /// \returns true while the origin axes are drawn
     [[nodiscard]] bool axisIsDrawn() const { return m_drawAxis; }
+    /// \returns true while the XY grid is drawn
     [[nodiscard]] bool gridIsDrawn() const { return m_drawGrid; }
 
 public slots:
@@ -84,24 +94,35 @@ public slots:
     void setGridIsDrawn(bool draw = true);
 
 signals:
+    /// auto-zoom was switched \param autoZoom its new state
     void autoZoomChanged(bool autoZoom);
     /// render rate, refreshed roughly twice a second while drawing
     void fpsChanged(double fps);
 
 protected:
 #ifdef Q_OS_WASM
+    /// \copydoc View::paintEvent
     void paintEvent(QPaintEvent *e) override;
 #else
+    /// set up the shader, VAO and buffers
     void initializeGL() override;
+    /// resize the GL viewport
     void resizeGL(int w, int h) override;
+    /// draw the decorations and the tool path
     void paintGL() override;
 #endif
 
+    /// start a drag
     void mousePressEvent(QMouseEvent *e) override;
+    /// orbit, pan or zoom the drag in progress
     void mouseMoveEvent(QMouseEvent *e) override;
+    /// end the drag
     void mouseReleaseEvent(QMouseEvent *e) override;
+    /// frame the whole path
     void mouseDoubleClickEvent(QMouseEvent *e) override;
+    /// zoom
     void wheelEvent(QWheelEvent *e) override;
+    /// the view's keyboard shortcuts
     void keyPressEvent(QKeyEvent *e) override;
 
 private:
@@ -111,80 +132,88 @@ private:
     void rebuildGeometry();
     /// bring the vertex data up to date, and on a GPU build push it over
     void uploadGeometry();
+    /// build the grid and axes
     void rebuildDecorations(std::vector<float> &out);
+    /// forget the bounding box
     void resetBounds();
     /// grow the bounding box to hold one motion
     void accumulateBounds(g2m::canonLine *l);
     /// derive scene centre and radius from the bounding box
     void applyBounds();
 
+    /// \returns the world-to-eye transform
     [[nodiscard]] QMatrix4x4 viewMatrix() const;
+    /// \returns the perspective projection
     [[nodiscard]] QMatrix4x4 projectionMatrix() const;
 #ifdef Q_OS_WASM
     /// project a run of vertex pairs and stroke them
     void drawLines(QPainter &p, const QMatrix4x4 &mvp, const std::vector<float> &verts,
                    const QColor &color, int first, int count);
 #else
+    /// draw one run of line vertices in a single colour
     void drawLines(const QMatrix4x4 &mvp, const QColor &color, int first, int count);
 #endif
 
+    /// turn the camera about the target
     void orbit(QPointF delta);
+    /// slide the target across the view plane
     void pan(QPointF delta);
+    /// move the camera along its line of sight
     void zoom(float steps);
 
     // --- tool path -------------------------------------------------------
-    mutable QMutex m_mutex;
-    std::vector<g2m::canonLine *> m_lines;
-    std::vector<float> m_traverseVerts;
-    std::vector<float> m_feedVerts;
-    bool m_geometryDirty = true;
-    bool m_decorDirty = true;
+    mutable QMutex m_mutex;          ///< guards the tool path and its bounds
+    std::vector<g2m::canonLine *> m_lines;  ///< the tool path; not owned
+    std::vector<float> m_traverseVerts;     ///< rapid vertices, xyz triples
+    std::vector<float> m_feedVerts;         ///< cutting vertices, xyz triples
+    bool m_geometryDirty = true;     ///< the tool path needs tessellating again
+    bool m_decorDirty = true;        ///< the grid and axes need rebuilding
 
-    QVector3D m_boundsMin;
-    QVector3D m_boundsMax;
-    bool m_boundsValid = false;
+    QVector3D m_boundsMin;           ///< low corner of the tool path
+    QVector3D m_boundsMax;           ///< high corner of the tool path
+    bool m_boundsValid = false;      ///< false until a motion has been seen
 
     /// the grid, axes and bounding box, in the same xyz-triple form
     std::vector<float> m_decorVerts;
 
     // --- GPU resources ---------------------------------------------------
 #ifndef Q_OS_WASM
-    QOpenGLShaderProgram m_program;
-    QOpenGLVertexArrayObject m_vao;
-    QOpenGLBuffer m_pathVbo{QOpenGLBuffer::VertexBuffer};
-    QOpenGLBuffer m_decorVbo{QOpenGLBuffer::VertexBuffer};
-    int m_mvpLoc = -1;
-    int m_colorLoc = -1;
+    QOpenGLShaderProgram m_program;  ///< the one shader everything is drawn with
+    QOpenGLVertexArrayObject m_vao;  ///< vertex array state
+    QOpenGLBuffer m_pathVbo{QOpenGLBuffer::VertexBuffer};   ///< tool path vertices
+    QOpenGLBuffer m_decorVbo{QOpenGLBuffer::VertexBuffer};  ///< grid and axes
+    int m_mvpLoc = -1;               ///< uniform location of the transform
+    int m_colorLoc = -1;             ///< uniform location of the colour
 #endif
     int m_traverseCount = 0; ///< vertices, offset 0 of m_pathVbo
     int m_feedCount = 0;     ///< vertices, right after the traverse ones
-    int m_gridFirst = 0;
-    int m_gridCount = 0;
-    int m_axisFirst = 0;
-    int m_boxFirst = 0;
-    bool m_glReady = false;
+    int m_gridFirst = 0;             ///< first grid vertex in m_decorVbo
+    int m_gridCount = 0;             ///< how many grid vertices
+    int m_axisFirst = 0;             ///< first axis vertex, six of them
+    int m_boxFirst = 0;              ///< first bounding-box vertex
+    bool m_glReady = false;          ///< the context and shader are usable
     /// true between initializeGL() and cleanupGl(): there are buffers to free
     bool m_glOwned = false;
 
     // --- camera ----------------------------------------------------------
-    QQuaternion m_orientation;
-    QVector3D m_target;
-    QVector3D m_sceneCenter;
-    float m_sceneRadius = 1.0f;
-    float m_distance = 4.0f;
-    float m_fovY = 45.0f;
+    QQuaternion m_orientation;       ///< which way the camera faces
+    QVector3D m_target;              ///< the point the camera looks at
+    QVector3D m_sceneCenter;         ///< middle of the tool path
+    float m_sceneRadius = 1.0f;      ///< radius of the sphere holding it
+    float m_distance = 4.0f;         ///< camera distance from the target
+    float m_fovY = 45.0f;            ///< vertical field of view, degrees
 
-    QPoint m_lastPos;
-    Qt::MouseButton m_dragButton = Qt::NoButton;
+    QPoint m_lastPos;                ///< cursor at the last mouse event
+    Qt::MouseButton m_dragButton = Qt::NoButton;  ///< button driving the drag
 
     // --- display flags ---------------------------------------------------
-    bool m_autoZoom = true;
-    bool m_drawAxis = true;
-    bool m_drawGrid = true;
+    bool m_autoZoom = true;          ///< reframe whenever the path changes
+    bool m_drawAxis = true;          ///< draw the origin axes
+    bool m_drawGrid = true;          ///< draw the XY grid
 
-    QElapsedTimer m_fpsTimer;
-    int m_fpsFrames = 0;
-    double m_fps = 0.0;
+    QElapsedTimer m_fpsTimer;        ///< since the last fpsChanged()
+    int m_fpsFrames = 0;             ///< frames drawn since then
+    double m_fps = 0.0;              ///< the rate last reported
 };
 
 #endif // VIEW_H

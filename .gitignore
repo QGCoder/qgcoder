@@ -61,3 +61,5 @@ libqgcodeeditor/
 qgcodeeditor-prefix/
 site/
 prefix/
+# generated API documentation (see Doxyfile)
+doc/

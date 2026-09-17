@@ -17,6 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+/// \file
+/// Canon lines that change state without moving the tool.
+
 #ifndef CANONMOTIONLESS_HH
 #define CANONMOTIONLESS_HH
 
@@ -39,15 +42,17 @@ This class is for anything other than STRAIGHT_FEED, STRAIGHT_TRAVERSE, and ARC_
 */
 
 class canonMotionless: protected canonLine {
+  /// the factory is the only thing that builds one of these
   friend canonLine* canonLine::canonLineFactory(std::string l, machineStatus s);
   public:
     /// create motionless canon-line
+    /// \param canonL the canon line \param prevStatus state to start from
     canonMotionless(std::string canonL, machineStatus prevStatus);
-    /// return false
+    /// \returns false, always: this command does not move the tool
     bool isMotion() {return false;};
-    /// return type of motion
+    /// \returns MOTIONLESS, always
     MOTION_TYPE getMotionType() {return MOTIONLESS;};
-    ///returns true if this command is a valid terminator for the NC file (i.e.
+    /// \returns true when this command validly terminates the program
     bool isNCend() {return ncEnd;};
   protected:
     /// flag(?)

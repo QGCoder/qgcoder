@@ -21,6 +21,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/// \file
+/// G-code to tool path: drives the interpreter and collects canon lines.
+
 #ifndef GTOM_HH
 #define GTOM_HH
 
@@ -42,11 +45,15 @@ class g2m : public QObject {
     Q_OBJECT;
 
     public:
+        /// Starts at the origin, with no origin offset and debug off.
         g2m()  { debug = false; initialPos = Pose( Point(0,0,0), Point(0,0,0) ); userOrigin  = Pose( Point(0,0,0), Point(0,0,0) ); total_gcode_lines = 0; }
-        /// return vector of canonLines
+        /// \returns every canon line of the last run
         std::vector<canonLine*> getCanonLines() { return lineVector; }
+        /// \param init the pose the machine starts from
         void setInitialPos(Pose init) { initialPos = init; }
+        /// \param origin the active origin offset
         void setOrigin(Pose origin) { userOrigin = origin; }
+        /// \returns the active origin offset
         Pose getOrigin() { return userOrigin; }
 
     /*
@@ -87,10 +94,13 @@ class g2m : public QObject {
         /// emitted during interpret(), the current canonLine object
         void signalCanonLine(canonLine* line);
         // emitted when M2 is reached
+        /// the program's end marker has been reached
         void signalNCend();
         // emitted when interpreter errored
+        /// the interpreter stopped early \param s the message to show
         void signalError(QString s);
         // emitted when parsing complete with all canon lines
+        /// the finished tool path \param lines every canon line of the run
         void signalCanonLines(QVector<canonLine*> lines);
         
     protected:    
@@ -111,10 +121,10 @@ class g2m : public QObject {
         int gcode_lines;
 
     private:
-        Pose initialPos;
-        Pose userOrigin;
+        Pose initialPos;      ///< pose the machine starts from
+        Pose userOrigin;      ///< active origin offset
 
-        int total_gcode_lines;
+        int total_gcode_lines;  ///< line-number comments seen in the output
         //std::vector<int> lineTable; not used for now
 };
 

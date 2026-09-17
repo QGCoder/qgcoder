@@ -1,3 +1,6 @@
+/// \file
+/// \see View
+
 #include "view.h"
 
 #include <QColor>
@@ -33,6 +36,10 @@ void main() {
 }
 )";
 
+/// Prefixes a shader body with the version line the context wants.
+/// \param isEs true for GLSL ES 3.00 (WebGL 2), false for 3.30 core
+/// \param body the shader source without its #version line
+/// \returns the complete shader source
 QByteArray shaderSource(bool isEs, const char *body)
 {
     QByteArray src = isEs ? QByteArrayLiteral("#version 300 es\nprecision highp float;\n")
@@ -51,6 +58,9 @@ const QColor kAxisXColor(220, 60, 60);
 const QColor kAxisYColor(60, 200, 60);
 const QColor kAxisZColor(80, 120, 255);
 
+/// Appends one vertex to an interleaved x,y,z buffer.
+/// \param[in,out] out the buffer to append to
+/// \param p the point
 void appendVertex(std::vector<float> &out, const g2m::Point &p)
 {
     out.push_back(static_cast<float>(p.x));
@@ -58,6 +68,9 @@ void appendVertex(std::vector<float> &out, const g2m::Point &p)
     out.push_back(static_cast<float>(p.z));
 }
 
+/// \overload
+/// \param[in,out] out the buffer to append to
+/// \param x abscissa \param y ordinate \param z applicate
 void appendVertex(std::vector<float> &out, float x, float y, float z)
 {
     out.push_back(x);
@@ -133,6 +146,7 @@ void View::cleanupGl()
 // tool path
 // ---------------------------------------------------------------------------
 
+/// Drops the tool path and everything derived from it.
 void View::clear()
 {
     {
@@ -147,6 +161,8 @@ void View::clear()
     update();
 }
 
+/// Replaces the tool path with a finished run and frames it.
+/// \param lines the canon lines; the view does not take ownership
 void View::setCanonLines(const QVector<g2m::canonLine *> &lines)
 {
     {
@@ -162,6 +178,8 @@ void View::setCanonLines(const QVector<g2m::canonLine *> &lines)
     update();
 }
 
+/// Adds one canon line, so the path can be watched as it is interpreted.
+/// \param l the line, ignored when null
 void View::appendCanonLine(g2m::canonLine *l)
 {
     if (!l)
@@ -178,6 +196,7 @@ void View::appendCanonLine(g2m::canonLine *l)
     update();
 }
 
+/// Redraws, reframing first if auto-zoom is on.
 void View::refresh()
 {
     if (m_autoZoom)
@@ -185,6 +204,7 @@ void View::refresh()
     update();
 }
 
+/// Forgets the bounding box, ready to accumulate a new one.
 void View::resetBounds()
 {
     m_boundsMin = QVector3D(0.0f, 0.0f, 0.0f);
@@ -192,6 +212,11 @@ void View::resetBounds()
     m_boundsValid = false;
 }
 
+/// Grows the bounding box to take in one move's endpoints. Only the endpoints:
+/// an arc can bulge outside them, which costs a little margin when framing but
+/// saves walking every sample.
+/// \param l the line; non-motion lines are ignored
+/// \note the caller must hold the mutex
 void View::accumulateBounds(g2m::canonLine *l)
 {
     if (!l || !l->isMotion())
@@ -216,6 +241,7 @@ void View::accumulateBounds(g2m::canonLine *l)
     }
 }
 
+/// Turns the bounding box into the centre and radius the camera works in.
 void View::applyBounds()
 {
     QVector3D lo, hi;
@@ -232,6 +258,7 @@ void View::applyBounds()
     m_decorDirty = true;
 }
 
+/// \param autoZoom true to reframe whenever the path changes
 void View::setAutoZoom(bool autoZoom)
 {
     if (m_autoZoom == autoZoom)
@@ -243,12 +270,14 @@ void View::setAutoZoom(bool autoZoom)
     update();
 }
 
+/// \param draw true to draw the origin axes
 void View::setAxisIsDrawn(bool draw)
 {
     m_drawAxis = draw;
     update();
 }
 
+/// \param draw true to draw the XY grid
 void View::setGridIsDrawn(bool draw)
 {
     m_drawGrid = draw;
@@ -259,6 +288,12 @@ void View::setGridIsDrawn(bool draw)
 // geometry
 // ---------------------------------------------------------------------------
 
+/// Tessellates the tool path into the traverse and feed vertex buffers.
+///
+/// Done once per change rather than per frame. Straight moves are exact with
+/// two samples; only arcs and helices are flattened, finely enough that the
+/// chord error stays small against the size of the part.
+/// \note the caller must not hold the mutex; this takes it
 void View::rebuildGeometry()
 {
     const QMutexLocker locker(&m_mutex);
@@ -302,6 +337,8 @@ void View::rebuildGeometry()
     }
 }
 
+/// Builds the grid and the origin axes, sized to the current scene.
+/// \param[out] out interleaved vertex buffer to fill
 void View::rebuildDecorations(std::vector<float> &out)
 {
     out.clear();
@@ -347,6 +384,9 @@ void View::rebuildDecorations(std::vector<float> &out)
         appendVertex(out, corner[idx].x(), corner[idx].y(), corner[idx].z());
 }
 
+/// Re-tessellates and re-uploads whatever has been marked dirty. Under
+/// Emscripten the vertex data is passed to the draw call directly instead of
+/// living in a buffer object.
 void View::uploadGeometry()
 {
     if (m_geometryDirty) {
@@ -387,6 +427,7 @@ void View::uploadGeometry()
 // camera
 // ---------------------------------------------------------------------------
 
+/// Returns to the default viewpoint: Z up, seen from front, right and above.
 void View::resetCamView()
 {
     // an isometric-ish viewpoint: Z up, looking from the front, right and above
@@ -395,6 +436,7 @@ void View::resetCamView()
     showEntireScene();
 }
 
+/// Backs the camera off far enough for the whole path to fit, in both axes.
 void View::showEntireScene()
 {
     m_target = m_sceneCenter;
@@ -409,6 +451,7 @@ void View::showEntireScene()
     update();
 }
 
+/// \returns the world-to-eye transform for the current camera
 QMatrix4x4 View::viewMatrix() const
 {
     QMatrix4x4 m;
@@ -418,6 +461,8 @@ QMatrix4x4 View::viewMatrix() const
     return m;
 }
 
+/// \returns the perspective projection, with the clipping planes placed to
+///          keep the whole scene between them wherever the camera is
 QMatrix4x4 View::projectionMatrix() const
 {
     const float aspect = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
@@ -431,6 +476,8 @@ QMatrix4x4 View::projectionMatrix() const
     return m;
 }
 
+/// Turns the camera about the target.
+/// \param delta drag since the last event, in pixels
 void View::orbit(QPointF delta)
 {
     constexpr float kDegPerPixel = 0.4f;
@@ -445,6 +492,9 @@ void View::orbit(QPointF delta)
     update();
 }
 
+/// Slides the target across the view plane, one pixel of drag to one pixel
+/// of scene at the target's depth.
+/// \param delta drag since the last event, in pixels
 void View::pan(QPointF delta)
 {
     if (height() <= 0)
@@ -461,6 +511,9 @@ void View::pan(QPointF delta)
     update();
 }
 
+/// Moves the camera along its line of sight, 10% per step, clamped so the
+/// scene can neither be left behind nor turned inside out.
+/// \param steps wheel notches or their fraction; positive zooms in
 void View::zoom(float steps)
 {
     m_distance *= std::pow(1.1f, -steps);
@@ -521,6 +574,8 @@ void View::drawLines(QPainter &p, const QMatrix4x4 &mvp, const std::vector<float
     p.drawLines(segments);
 }
 
+/// Fallback painting for when there is no usable GL context: the path is
+/// drawn with QPainter so the window is still useful.
 void View::paintEvent(QPaintEvent *)
 {
     uploadGeometry();
@@ -561,6 +616,8 @@ void View::paintEvent(QPaintEvent *)
 
 #else
 
+/// Compiles the shader, sets up the VAO and buffers and records whether the
+/// context is usable at all - the widget falls back to QPainter if not.
 void View::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -604,11 +661,17 @@ void View::initializeGL()
     m_decorDirty = true;
 }
 
+/// \param w new width in device pixels \param h new height in device pixels
 void View::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
 }
 
+/// Draws one run of line vertices in a single colour.
+/// \param mvp   model-view-projection transform
+/// \param color the colour to draw in
+/// \param first index of the first vertex
+/// \param count how many vertices; nothing is drawn when not positive
 void View::drawLines(const QMatrix4x4 &mvp, const QColor &color, int first, int count)
 {
     if (count <= 0)
@@ -618,6 +681,8 @@ void View::drawLines(const QMatrix4x4 &mvp, const QColor &color, int first, int 
     glDrawArrays(GL_LINES, first, count);
 }
 
+/// Draws the decorations and then the tool path, traverses and feeds in their
+/// own colours, and measures the frame rate reported in the status bar.
 void View::paintGL()
 {
     if (m_glReady) {
@@ -680,6 +745,8 @@ void View::paintGL()
 // input
 // ---------------------------------------------------------------------------
 
+/// Remembers which button started the drag and where.
+/// \param e the event
 void View::mousePressEvent(QMouseEvent *e)
 {
     m_lastPos = e->position().toPoint();
@@ -687,6 +754,8 @@ void View::mousePressEvent(QMouseEvent *e)
     e->accept();
 }
 
+/// Orbits with the left button, pans with the right and zooms with the middle.
+/// \param e the event
 void View::mouseMoveEvent(QMouseEvent *e)
 {
     const QPoint pos = e->position().toPoint();
@@ -709,12 +778,16 @@ void View::mouseMoveEvent(QMouseEvent *e)
     e->accept();
 }
 
+/// Ends the drag.
+/// \param e the event
 void View::mouseReleaseEvent(QMouseEvent *e)
 {
     m_dragButton = Qt::NoButton;
     e->accept();
 }
 
+/// Double-clicking with the left button frames the whole path.
+/// \param e the event
 void View::mouseDoubleClickEvent(QMouseEvent *e)
 {
     if (e->button() == Qt::LeftButton) {
@@ -725,6 +798,10 @@ void View::mouseDoubleClickEvent(QMouseEvent *e)
     QWidget::mouseDoubleClickEvent(e);
 }
 
+/// Zooms. Trackpads deliver smooth pixel deltas and notched wheels multiples
+/// of 120; macOS reports a notch as +/-1 with no pixel delta, which the 120
+/// normalisation would swallow almost entirely.
+/// \param e the event
 void View::wheelEvent(QWheelEvent *e)
 {
     // Trackpads and Apple's mice deliver smooth pixel deltas; a conventional
@@ -753,6 +830,9 @@ void View::wheelEvent(QWheelEvent *e)
     e->accept();
 }
 
+/// Home and Space frame the path, R restores the default viewpoint, and A and
+/// G toggle the axes and the grid.
+/// \param e the event
 void View::keyPressEvent(QKeyEvent *e)
 {
     switch (e->key()) {
