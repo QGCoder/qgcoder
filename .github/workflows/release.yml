@@ -125,93 +125,11 @@ jobs:
         if-no-files-found: error
         path: artifacts
 
+  # The same job CI runs on every push; on a tag its DMG becomes a release
+  # asset. Artifacts a called workflow uploads belong to this run, so the
+  # release job downloads it along with the rest.
   build-macos:
-    name: macos-universal
-    # Big Sur (macOS 11) needs Qt 6.7, and linking Qt 6.7 on the newer macOS
-    # 26 SDK fails because its FindWrapOpenGL.cmake still wants the AGL
-    # framework, which that SDK no longer ships. macos-latest points at macOS
-    # 26 now, so pin the job to macos-15, whose SDK still has AGL.
-    runs-on: macos-15
-    steps:
-    - uses: actions/checkout@v7
-
-    # The official Qt builds for macOS are universal, so one DMG covers both
-    # Apple Silicon and Intel. Homebrew's Qt is single-architecture.
-    #
-    # Pinned to the 6.7 line: it is the newest Qt whose official binaries run
-    # on macOS 11 (Big Sur, the oldest release qgcoder supports); Qt 6.8
-    # raised the macOS floor to 12, and 6.10 requires 13.
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '6.7.*'
-        host: mac
-        target: desktop
-        arch: clang_64
-        cache: true
-
-    - name: Build and install libqgcodeeditor
-      run: |
-        # No .deb to install from here, so build the editor widget into a
-        # staging prefix. Static, so nothing extra ends up in the bundle.
-        git clone --depth 1 https://github.com/QGCoder/libqgcodeeditor
-        cmake -S libqgcodeeditor -B libqgcodeeditor/build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$PWD/qgcodeeditor-prefix" \
-            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
-            -DBUILD_STATIC_LIB=ON \
-            -DBUILD_EXAMPLES=OFF \
-            -DBUILD_DESIGNER_PLUGIN=OFF
-        cmake --build libqgcodeeditor/build -j"$(sysctl -n hw.ncpu)"
-        cmake --install libqgcodeeditor/build
-
-    - name: Build the application icon
-      run: |
-        # icons/qgcoder.png is 256x256; the larger entries are upscaled so the
-        # Finder has something at every size it asks for.
-        mkdir -p qgcoder.iconset
-        for size in 16 32 128 256 512; do
-          sips -z $size $size src/icons/qgcoder.png \
-               --out "qgcoder.iconset/icon_${size}x${size}.png" >/dev/null
-          sips -z $((size * 2)) $((size * 2)) src/icons/qgcoder.png \
-               --out "qgcoder.iconset/icon_${size}x${size}@2x.png" >/dev/null
-        done
-        iconutil --convert icns qgcoder.iconset --output src/icons/qgcoder.icns
-
-    - name: Build qgcoder
-      run: |
-        cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$PWD/qgcodeeditor-prefix"
-        cmake --build build -j"$(sysctl -n hw.ncpu)"
-
-    - name: Package the disk image
-      run: |
-        VERSION="${GITHUB_REF_NAME#v}"
-        # installing also runs macdeployqt, via qt_generate_deploy_app_script()
-        cmake --install build --prefix "$PWD/dist"
-        # There is no Developer ID certificate here, so the bundle is only
-        # ad-hoc signed: arm64 refuses to load anything unsigned at all, and
-        # Gatekeeper still asks the user to confirm the first launch.
-        codesign --force --deep --sign - dist/qgcoder.app
-        lipo -archs dist/qgcoder.app/Contents/MacOS/qgcoder
-        mkdir -p dmg
-        cp -R dist/qgcoder.app dmg/
-        ln -s /Applications dmg/Applications
-        mkdir -p artifacts
-        hdiutil create -volname "QGCoder ${VERSION}" \
-            -srcfolder dmg -ov -format UDZO \
-            "artifacts/qgcoder-${VERSION}-macos-universal.dmg"
-
-    - uses: actions/upload-artifact@v7
-      with:
-        name: macos-universal
-        if-no-files-found: error
-        path: artifacts
+    uses: ./.github/workflows/macos.yml
 
   build-windows:
     name: windows-mingw64
