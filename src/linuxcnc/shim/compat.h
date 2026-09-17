@@ -60,6 +60,8 @@ inline char *basename(const char *path)
 #  include <cstring>
 #  include <ctime>
 #  include <io.h>
+#  include <cstdarg>
+#  include <cstdio>
 
 // The POSIX per-thread locale API, which inifile.cc uses to force the C
 // locale around strtoll(). Windows has the same idea under different names,
@@ -137,6 +139,32 @@ inline int link(const char *oldpath, const char *newpath)
 inline char *realpath(const char *path, char *resolved)
 {
     return _fullpath(resolved, path, _MAX_PATH);
+}
+
+/// vasprintf(), a GNU extension that MinGW does not carry. saicanon.cc uses
+/// it to format an error of unknown length.
+///
+/// This was left out of an earlier round on the assumption mingw-w64 provided
+/// it; the build says otherwise. It had been hidden until now because
+/// libintl.h was rewriting the name to libintl_vasprintf, which failed at link
+/// instead of at compile.
+/// \param strp set to the allocated string on success; the caller frees it
+/// \param fmt printf format
+/// \param ap the arguments
+/// \returns the number of characters written, or -1 on failure
+inline int vasprintf(char **strp, const char *fmt, va_list ap)
+{
+    va_list measure;
+    va_copy(measure, ap);
+    const int len = std::vsnprintf(nullptr, 0, fmt, measure);
+    va_end(measure);
+    if (len < 0)
+        return -1;
+
+    *strp = (char *)std::malloc((size_t)len + 1);
+    if (!*strp)
+        return -1;
+    return std::vsnprintf(*strp, (size_t)len + 1, fmt, ap);
 }
 
 /// Flush a file's data to disk. _commit() is the Windows equivalent; the
