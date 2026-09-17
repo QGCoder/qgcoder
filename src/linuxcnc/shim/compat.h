@@ -33,8 +33,6 @@
 // has declared the POSIX version as well.
 #if !defined(__GLIBC__)
 #  include <cstring>
-#  include <ctime>
-#  include <io.h>
 
 /// \param path the path to take the last component of
 /// \returns a pointer into \a path, after the last separator
@@ -60,6 +58,8 @@ inline char *basename(const char *path)
 #  include <cstdio>
 #  include <cstdlib>
 #  include <cstring>
+#  include <ctime>
+#  include <io.h>
 
 // The POSIX per-thread locale API, which inifile.cc uses to force the C
 // locale around strtoll(). Windows has the same idea under different names,
