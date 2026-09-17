@@ -46,18 +46,34 @@ target_compile_definitions(linuxcnc-rs274ngc PUBLIC
     _USE_MATH_DEFINES   # M_PI, which the Windows CRT headers hide by default
 )
 
-# Headers the upstream sources rely on having been pulled in by LinuxCNC's own
-# build. Forced in rather than added to the sources, which stay untouched.
-# The SHELL: prefix keeps each "-include <header>" pair together; without it
-# CMake de-duplicates the repeated -include and the headers become input files.
-if(MSVC)
-    target_compile_options(linuxcnc-rs274ngc PRIVATE
-        /FIcstring /FIcwctype /FIcmath /w)
-else()
-    target_compile_options(linuxcnc-rs274ngc PRIVATE
-        "SHELL:-include cstring"
-        "SHELL:-include strings.h"
-        "SHELL:-include cwctype"
-        "SHELL:-include cmath"
-        -w)
+# Windows has no <dlfcn.h>; interp_base.cc includes it for a shared-library
+# loader qgcoder never calls. shim/win only goes on the include path there.
+if(WIN32)
+    target_include_directories(linuxcnc-rs274ngc PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/shim/win)
 endif()
+
+# What LinuxCNC's own build hands its sources and they do not include for
+# themselves. Forced in rather than added to the sources, which stay untouched.
+if(MSVC)
+    target_compile_options(linuxcnc-rs274ngc PRIVATE /FIcompat.h)
+else()
+    target_compile_options(linuxcnc-rs274ngc PRIVATE "SHELL:-include compat.h")
+endif()
+
+# Warnings off for the vendored sources only - they are third-party code
+# carried as it came, and there are thousands. interp_driver.cpp and
+# nopython.cc are ours and keep theirs.
+if(MSVC)
+    set(linuxcnc_no_warnings "/w")
+else()
+    set(linuxcnc_no_warnings "-w")
+endif()
+set_source_files_properties(
+    ${LINUXCNC_INTERP_SOURCES}
+    emc/ini/inifile.cc
+    emc/nml_intf/modal_state.cc
+    emc/tooldata/tooldata_common.cc
+    emc/tooldata/tooldata_nml.cc
+    PROPERTIES COMPILE_OPTIONS "${linuxcnc_no_warnings}"
+)
