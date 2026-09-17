@@ -247,8 +247,8 @@ void MainWindow::runCommand()
 
 void MainWindow::changedGcode()
 {
-    // openInBrowser() fires textChanged once per appended line; interpreting on
-    // each of those would mean one interpreter run per line of the file.
+    // openInBrowser() fires textChanged as it fills the editor, and
+    // interpreting a half-loaded file would only be thrown away.
     if (bLoading)
         return;
 
@@ -372,9 +372,21 @@ void MainWindow::openInBrowser(const QString &filename)
     bLoading = true;
     ui->gcode->clear();
 
+    // Straight into the document, rather than a line at a time through
+    // QGCodeEditor::appendNewPlainText(). That helper was doing two things we
+    // cannot live with once the file can be saved again:
+    //
+    //  * it reformats every line on the way in - upper-cases it, drops N word
+    //    numbers, respaces the words and pushes a trailing comment onto a line
+    //    of its own - so opening a file and saving it rewrote it;
+    //  * past its first 200 lines it parks the rest in a private buffer that
+    //    it only feeds into the document as the cursor moves, so the document
+    //    held a prefix of the file and saving truncated everything after it.
+    //
+    // The editor still highlights the syntax; it just no longer edits the file
+    // behind the user's back.
     QTextStream ts(&file);
-    while (!ts.atEnd())
-        ui->gcode->appendNewPlainText(ts.readLine());
+    ui->gcode->setPlainText(ts.readAll());
     bLoading = false;
     file.close();
 
