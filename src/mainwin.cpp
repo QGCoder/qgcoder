@@ -99,6 +99,12 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
 
     connect(playbackTimer, &QTimer::timeout, this, &MainWindow::playbackStep);
 
+    // catch Tab key presses globally: child widgets (the View, toolbars,
+    // docks) consume key events before MainWindow::keyPressEvent() sees them,
+    // so an application-wide event filter is the reliable way to toggle split
+    // view on Tab.
+    qApp->installEventFilter(this);
+
     // create the 4 split views up front (hidden until split mode is activated)
     for (int i = 0; i < 4; ++i) {
         m_views[i] = new View(this);
@@ -546,14 +552,18 @@ void MainWindow::syncViewPaths()
 }
 
 /// Tab toggles the 4-way split view.
-void MainWindow::keyPressEvent(QKeyEvent *event)
+/// Installed as an application-wide event filter so Tab is caught before
+/// child widgets (the View, toolbars, docks) consume it.
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    if (event->key() == Qt::Key_Tab) {
-        toggleSplitView();
-        event->accept();
-        return;
+    if (event->type() == QEvent::KeyPress) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Tab) {
+            toggleSplitView();
+            return true; // event consumed
+        }
     }
-    QMainWindow::keyPressEvent(event);
+    return QMainWindow::eventFilter(watched, event);
 }
 
 /// File / Open. The desktop build asks for a path; the browser build takes

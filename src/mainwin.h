@@ -97,8 +97,8 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    /// Tab toggles between single and 4-way split 3D view
-    void keyPressEvent(QKeyEvent *event) override;
+    /// catch Tab key presses globally (child widgets consume them first)
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private: // functions
     void loadSettings();
