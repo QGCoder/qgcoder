@@ -861,12 +861,13 @@ void View::mouseReleaseEvent(QMouseEvent *e)
     e->accept();
 }
 
-/// Double-clicking with the left button frames the whole path.
+/// Double-clicking with the left button resets the view to the default
+/// viewpoint and frames the whole path.
 /// \param e the event
 void View::mouseDoubleClickEvent(QMouseEvent *e)
 {
     if (e->button() == Qt::LeftButton) {
-        showEntireScene();
+        resetCamView();
         e->accept();
         return;
     }
