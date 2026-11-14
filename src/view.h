@@ -87,7 +87,9 @@ public slots:
 
     /// set the current tool position during playback
     void setToolPosition(double x, double y, double z);
-    /// clear the tool position marker
+    /// append one point to the already-traversed playback path (painted pink)
+    void addTraversedPoint(double x, double y, double z);
+    /// clear the tool position marker and the traversed path
     void clearToolPosition();
 
     /// frame the whole tool path
@@ -225,9 +227,12 @@ private:
     // --- playback tool position ------------------------------------------
     g2m::Point m_toolPos;            ///< current tool position during playback
     bool m_toolPosValid = false;     ///< true while playback is showing a position
+    std::vector<g2m::Point> m_traversedPath;  ///< already-executed path (pink trail)
 #ifndef Q_OS_WASM
-    QOpenGLBuffer m_toolVbo{QOpenGLBuffer::VertexBuffer};  ///< tool marker vertices
+    QOpenGLBuffer m_toolVbo{QOpenGLBuffer::VertexBuffer};   ///< tool marker vertices
     int m_toolCount = 0;             ///< vertices in m_toolVbo
+    QOpenGLBuffer m_traversedVbo{QOpenGLBuffer::VertexBuffer};  ///< pink trail vertices
+    int m_traversedCount = 0;        ///< vertices in m_traversedVbo
 #endif
 
     QElapsedTimer m_fpsTimer;        ///< since the last fpsChanged()

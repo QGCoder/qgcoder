@@ -79,14 +79,18 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
                 syncViewPaths();
             });
 
-    // show the moving tool in every active 3D view
+    // show the moving tool and paint the already-traversed path in pink
+    // (LinuxCNC Axis style) in every active 3D view.
     connect(gPlayer, &g2m::GPlayer::signalToolPosition,
             this, [this](double x, double y, double z, int, int, double) {
                 if (m_splitView) {
-                    for (int i = 0; i < 4; ++i)
+                    for (int i = 0; i < 4; ++i) {
                         m_views[i]->setToolPosition(x, y, z);
+                        m_views[i]->addTraversedPoint(x, y, z);
+                    }
                 } else {
                     view->setToolPosition(x, y, z);
+                    view->addTraversedPoint(x, y, z);
                 }
             }, Qt::QueuedConnection);
 

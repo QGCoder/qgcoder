@@ -137,6 +137,7 @@ void View::cleanupGl()
     m_pathVbo.destroy();
     m_decorVbo.destroy();
     m_toolVbo.destroy();
+    m_traversedVbo.destroy();
     m_vao.destroy();
     m_program.removeAllShaders();
     doneCurrent();
@@ -156,10 +157,16 @@ void View::clear()
         m_traverseVerts.clear();
         m_feedVerts.clear();
         m_geometryDirty = true;
+        m_toolPosValid = false;
+        m_traversedPath.clear();
         resetBounds();
     }
     applyBounds();
     update();
+#ifndef Q_OS_WASM
+    m_toolCount = 0;
+    m_traversedCount = 0;
+#endif
 }
 
 /// Replaces the tool path with a finished run and frames it.
@@ -316,15 +323,68 @@ void View::setToolPosition(double x, double y, double z)
     update();
 }
 
-/// Clear the tool position marker (e.g. when playback stops).
+/// Append one point to the already-traversed playback path, painted pink.
+/// \param x \param y \param z machine coordinates of the tool tip
+void View::addTraversedPoint(double x, double y, double z)
+{
+    {
+        const QMutexLocker locker(&m_mutex);
+        m_traversedPath.push_back(g2m::Point(x, y, z));
+    }
+
+#ifndef Q_OS_WASM
+    // build a continuous polyline: duplicate interior points so consecutive
+    // segments connect (drawLines draws disjoint pairs: 0-1, 2-3, ...)
+    std::vector<float> verts;
+    std::size_t n = 0;
+    {
+        const QMutexLocker locker(&m_mutex);
+        n = m_traversedPath.size();
+    }
+    if (n >= 2) {
+        verts.reserve(n * 2 * 3); // each point appears twice except the ends
+        {
+            const QMutexLocker locker(&m_mutex);
+            for (std::size_t i = 0; i < n; ++i) {
+                const g2m::Point &p = m_traversedPath[i];
+                verts.push_back(static_cast<float>(p.x));
+                verts.push_back(static_cast<float>(p.y));
+                verts.push_back(static_cast<float>(p.z));
+                if (i > 0) {
+                    // duplicate this point so the previous segment ends here
+                    // and the next segment starts here
+                    verts.push_back(static_cast<float>(p.x));
+                    verts.push_back(static_cast<float>(p.y));
+                    verts.push_back(static_cast<float>(p.z));
+                }
+            }
+        }
+    }
+
+    m_traversedVbo.bind();
+    if (!verts.empty()) {
+        m_traversedVbo.allocate(verts.data(), static_cast<int>(verts.size() * sizeof(float)));
+        m_traversedCount = static_cast<int>(verts.size() / 3);
+    } else {
+        m_traversedCount = 0;
+    }
+    m_traversedVbo.release();
+#endif
+
+    update();
+}
+
+/// Clear the tool position marker and the traversed path (e.g. when playback stops).
 void View::clearToolPosition()
 {
     {
         const QMutexLocker locker(&m_mutex);
         m_toolPosValid = false;
+        m_traversedPath.clear();
     }
 #ifndef Q_OS_WASM
     m_toolCount = 0;
+    m_traversedCount = 0;
 #endif
     update();
 }
@@ -676,6 +736,25 @@ void View::paintEvent(QPaintEvent *)
     drawLines(p, mvp, m_traverseVerts, kTraverseColor, 0, m_traverseCount);
     drawLines(p, mvp, m_feedVerts, kFeedColor, 0, m_feedCount);
 
+    // the already-traversed playback path, painted pink (LinuxCNC Axis style)
+    if (m_traversedPath.size() >= 2) {
+        const QColor kTraversedColor(255, 105, 180); // hot pink
+        p.setPen(QPen(kTraversedColor, 2.0));
+        std::vector<float> verts;
+        // duplicate interior points for continuous segments (drawLines draws pairs)
+        {
+            const QMutexLocker locker(&m_mutex);
+            for (std::size_t i = 0; i < m_traversedPath.size(); ++i) {
+                const g2m::Point &pt = m_traversedPath[i];
+                appendVertex(verts, pt.x, pt.y, pt.z);
+                if (i > 0) {
+                    appendVertex(verts, pt.x, pt.y, pt.z);
+                }
+            }
+        }
+        drawLines(p, mvp, verts, kTraversedColor, 0, static_cast<int>(verts.size() / 3));
+    }
+
     // the playback tool position marker
     if (m_toolPosValid) {
         const double h = 2.0;
@@ -734,6 +813,8 @@ void View::initializeGL()
     m_decorVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     m_toolVbo.create();
     m_toolVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    m_traversedVbo.create();
+    m_traversedVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
 
     glEnable(GL_DEPTH_TEST);
 #ifdef GL_LINE_SMOOTH
@@ -814,6 +895,18 @@ void View::paintGL()
             drawLines(mvp, kTraverseColor, 0, m_traverseCount);
             drawLines(mvp, kFeedColor, m_traverseCount, m_feedCount);
             m_pathVbo.release();
+
+            // the already-traversed playback path, painted pink (LinuxCNC Axis style)
+            if (m_traversedCount > 0) {
+                m_traversedVbo.bind();
+                m_program.enableAttributeArray(0);
+                m_program.setAttributeBuffer(0, GL_FLOAT, 0, 3);
+                glLineWidth(2.0f);
+                const QColor kTraversedColor(255, 105, 180); // hot pink
+                m_program.setUniformValue(m_colorLoc, QVector4D(kTraversedColor.redF(), kTraversedColor.greenF(), kTraversedColor.blueF(), 1.0f));
+                glDrawArrays(GL_LINES, 0, m_traversedCount);
+                m_traversedVbo.release();
+            }
 
             // the playback tool position marker
             if (m_toolPosValid && m_toolCount > 0) {
