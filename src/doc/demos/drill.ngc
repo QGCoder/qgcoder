@@ -1,0 +1,22 @@
+(QGCoder demo - drilling pattern with canned cycles)
+(Units: millimetres, absolute positioning)
+
+G21 G90 G17 G40 G94
+
+S1500 M3            (spindle on, clockwise)
+F250
+
+G0 Z10.000
+
+(--- G81 plain drill, four holes ---)
+G98 G81 X0.000 Y0.000 Z-8.000 R2.000
+X20.000 Y0.000
+X20.000 Y20.000
+X0.000 Y20.000
+
+G80                 (cancel canned cycle)
+G0 Z10.000
+G0 X0.000 Y0.000
+
+M5                (spindle off)
+M2                (end of program)

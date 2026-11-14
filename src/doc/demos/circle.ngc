@@ -1,0 +1,17 @@
+(QGCoder demo - milling a circle)
+(Units: millimetres, absolute positioning)
+
+G21 G90 G17 G40 G94
+
+S1500 M3            (spindle on, clockwise)
+F300
+
+G0 Z10.000
+G0 X-20.000 Y0.000
+G1 Z-2.000 F150
+G2 X-20.000 Y0.000 I20.000 J0.000   (full circle, radius 20)
+G0 Z10.000
+G0 X0.000 Y0.000
+
+M5                (spindle off)
+M2                (end of program)

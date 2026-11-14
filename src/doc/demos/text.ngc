@@ -1,0 +1,20 @@
+(QGCoder demo - simple engraving)
+(Units: millimetres, absolute positioning)
+
+G21 G90 G17 G40 G94
+
+S1000 M3            (spindle on, clockwise)
+F200
+
+G0 Z10.000
+G0 X-10.000 Y-5.000
+G1 Z-0.500 F100
+G1 X10.000 Y-5.000 F300      (engrave a line)
+G1 X10.000 Y5.000
+G1 X-10.000 Y5.000
+G1 X-10.000 Y-5.000
+G0 Z10.000
+G0 X0.000 Y0.000
+
+M5                (spindle off)
+M2                (end of program)

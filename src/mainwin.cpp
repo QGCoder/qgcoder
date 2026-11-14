@@ -112,6 +112,21 @@ void MainWindow::setupConnections()
     connect(ui->action_Issues, &QAction::triggered, this, &MainWindow::helpIssues);
     connect(ui->action_Chat, &QAction::triggered, this, &MainWindow::helpChat);
 
+    connect(ui->action_Demo_Circle, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/circle.ngc"_s); });
+    connect(ui->action_Demo_Square, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/square.ngc"_s); });
+    connect(ui->action_Demo_Drill, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/drill.ngc"_s); });
+    connect(ui->action_Demo_Helix, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/helix.ngc"_s); });
+    connect(ui->action_Demo_Thread, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/thread.ngc"_s); });
+    connect(ui->action_Demo_Text, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/text.ngc"_s); });
+    connect(ui->action_Demo_Demo, &QAction::triggered,
+            this, [this] { loadDemoResource(u":/doc/demos/demo.ngc"_s); });
+
 #if QT_CONFIG(process)
     connect(commandProcess, &QProcess::finished, this, [this](int, QProcess::ExitStatus) {
         if (commandPending) {
@@ -315,6 +330,26 @@ void MainWindow::loadGCodeFile()
 
     if (openFile.isEmpty())
         return;
+    if (openInViewer(openFile) == 0)
+        openInBrowser(openFile);
+}
+
+/// Loads a demo g-code file from the resources. The interpreter reads through
+/// stdio and knows nothing about qrc paths, so the file is copied to a temp
+/// location first, exactly as the WASM startup does with its sample.
+/// \param resourcePath the qrc path of the .ngc file to load
+void MainWindow::loadDemoResource(const QString &resourcePath)
+{
+    const QString fileName = QFileInfo(resourcePath).fileName();
+    const QString path = QDir::tempPath() + u'/' + fileName;
+    if (!QFile::exists(path) && !QFile::copy(resourcePath, path)) {
+        ui->statusbar->showMessage(tr("Error loading demo %1").arg(fileName), 5000);
+        return;
+    }
+    // a file copied out of the resources is read-only, and the editor is
+    // meant to be able to save over this one
+    QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    openFile = path;
     if (openInViewer(openFile) == 0)
         openInBrowser(openFile);
 }

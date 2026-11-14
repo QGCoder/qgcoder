@@ -61,6 +61,7 @@
     <addaction name="action_Open"/>
     <addaction name="action_Save"/>
     <addaction name="action_Save_As"/>
+    <addaction name="menu_Demos"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
@@ -89,7 +90,20 @@
     </property>
     <addaction name="action_Settings"/>
    </widget>
+   <widget class="QMenu" name="menu_Demos">
+    <property name="title">
+     <string>&amp;Demos</string>
+    </property>
+    <addaction name="action_Demo_Circle"/>
+    <addaction name="action_Demo_Square"/>
+    <addaction name="action_Demo_Drill"/>
+    <addaction name="action_Demo_Helix"/>
+    <addaction name="action_Demo_Thread"/>
+    <addaction name="action_Demo_Text"/>
+    <addaction name="action_Demo_Demo"/>
+   </widget>
    <addaction name="menu_File"/>
+   <addaction name="menu_Demos"/>
    <addaction name="menu_Edit"/>
    <addaction name="menu_View"/>
    <addaction name="menu_Help"/>
@@ -379,6 +393,62 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+-</string>
+   </property>
+  </action>
+  <action name="action_Demo_Circle">
+   <property name="text">
+    <string>&amp;Circle</string>
+   </property>
+   <property name="toolTip">
+    <string>Mill a circle.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Square">
+   <property name="text">
+    <string>&amp;Square pocket</string>
+   </property>
+   <property name="toolTip">
+    <string>Clear a square pocket.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Drill">
+   <property name="text">
+    <string>&amp;Drilling pattern</string>
+   </property>
+   <property name="toolTip">
+    <string>Drill four holes with a canned cycle.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Helix">
+   <property name="text">
+    <string>&amp;Helical bore</string>
+   </property>
+   <property name="toolTip">
+    <string>Helically interpolate a bore.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Thread">
+   <property name="text">
+    <string>&amp;Threading</string>
+   </property>
+   <property name="toolTip">
+    <string>Single pass threading.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Text">
+   <property name="text">
+    <string>&amp;Engraving</string>
+   </property>
+   <property name="toolTip">
+    <string>Simple engraving.</string>
+   </property>
+  </action>
+  <action name="action_Demo_Demo">
+   <property name="text">
+    <string>&amp;Demo</string>
+   </property>
+   <property name="toolTip">
+    <string>The full demo (pocket, bore, chamfer).</string>
    </property>
   </action>
  </widget>

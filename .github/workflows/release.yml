@@ -9,6 +9,9 @@ permissions:
   contents: write
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Debian/Ubuntu .deb package built on the GitHub-hosted Ubuntu runner.
+  # ---------------------------------------------------------------------------
   build:
     name: ${{ matrix.target }}
     strategy:
@@ -87,11 +90,11 @@ jobs:
         if-no-files-found: error
         path: artifacts
 
-  # The GitHub-hosted runners only run Ubuntu, so the other .deb flavours are
-  # built inside the target distribution's own container image, with the
-  # workspace mounted read-write at /build and the packages collected in
-  # artifacts/ for the host to upload. Debian 12-14 are the three Debian
-  # releases still in maintenance as of 2026 (oldstable, stable and testing).
+  # ---------------------------------------------------------------------------
+  # Additional Debian/Ubuntu .deb flavours built inside each target
+  # distribution's own container image. GitHub-hosted runners only run Ubuntu,
+  # so this covers Debian 12-14 (bookworm/trixie/forky) and Ubuntu 26.04.
+  # ---------------------------------------------------------------------------
   build-deb:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -125,17 +128,22 @@ jobs:
         if-no-files-found: error
         path: artifacts
 
-  # The same job CI runs on every push; on a tag its DMG becomes a release
-  # asset. Artifacts a called workflow uploads belong to this run, so the
-  # release job downloads it along with the rest.
+  # ---------------------------------------------------------------------------
+  # macOS universal .dmg (qgcoder.app inside). Called workflow, kept in its
+  # own file so the push/PR CI and the release CI never drift.
+  # ---------------------------------------------------------------------------
   build-macos:
     uses: ./.github/workflows/macos.yml
 
-  # The same job CI runs on every push; on a tag its installer becomes a
-  # release asset.
+  # ---------------------------------------------------------------------------
+  # Windows NSIS installer (.exe). Called workflow for the same reason.
+  # ---------------------------------------------------------------------------
   build-windows:
     uses: ./.github/workflows/windows.yml
 
+  # ---------------------------------------------------------------------------
+  # Assemble every artifact from every platform job into one GitHub release.
+  # ---------------------------------------------------------------------------
   release:
     name: Release
     needs: [build, build-deb, build-macos, build-windows]

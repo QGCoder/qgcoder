@@ -1,0 +1,25 @@
+(QGCoder demo - square pocket, cleared in two passes)
+(Units: millimetres, absolute positioning)
+
+G21 G90 G17 G40 G94
+
+S1500 M3            (spindle on, clockwise)
+F300
+
+G0 Z10.000
+G0 X-20.000 Y-20.000
+G1 Z-3.000 F150
+G1 X20.000 Y-20.000 F400      (first pass around the square)
+G1 X20.000 Y20.000
+G1 X-20.000 Y20.000
+G1 X-20.000 Y-20.000
+G1 Z-6.000                      (deeper second pass)
+G1 X20.000 Y-20.000
+G1 X20.000 Y20.000
+G1 X-20.000 Y20.000
+G1 X-20.000 Y-20.000
+G0 Z10.000
+G0 X0.000 Y0.000
+
+M5                (spindle off)
+M2                (end of program)

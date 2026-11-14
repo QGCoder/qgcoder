@@ -69,6 +69,10 @@ public slots:
     void helpIssues();
     void helpChat();
 
+    /// Load one of the demo g-code files compiled into the resources.
+    /// \param resourcePath the qrc path of the .ngc file to load
+    void loadDemoResource(const QString &resourcePath);
+
 signals:
     /// tell the worker which tool table to use \param s the path, may be empty
     void setToolTable(const QString &s);

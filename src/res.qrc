@@ -8,5 +8,12 @@
         <file>icons/view-fullscreen.svg</file>
         <file>icons/zoom-fit-best.svg</file>
         <file>doc/demo.ngc</file>
+        <file>doc/demos/circle.ngc</file>
+        <file>doc/demos/square.ngc</file>
+        <file>doc/demos/drill.ngc</file>
+        <file>doc/demos/helix.ngc</file>
+        <file>doc/demos/thread.ngc</file>
+        <file>doc/demos/text.ngc</file>
+        <file>doc/demos/demo.ngc</file>
     </qresource>
 </RCC>
