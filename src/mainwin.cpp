@@ -66,6 +66,13 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
     ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
     ui->action_Playback_Stop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
+    // view preset icons from the resource collection
+    ui->action_View_Top->setIcon(QIcon(u":/icons/view-top.svg"_s));
+    ui->action_View_Front->setIcon(QIcon(u":/icons/view-front.svg"_s));
+    ui->action_View_Right->setIcon(QIcon(u":/icons/view-right.svg"_s));
+    ui->action_View_Iso->setIcon(QIcon(u":/icons/view-iso.svg"_s));
+    ui->action_View_Reset->setIcon(QIcon(u":/icons/view-reset.svg"_s));
+
     // feed the finished tool path to the player and to every view so that
     // the 4-way split shows the same geometry in all panes.
     // clear() drops the previous file's canon lines so playback always runs

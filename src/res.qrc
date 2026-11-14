@@ -7,6 +7,11 @@
         <file>icons/document-save-as.svg</file>
         <file>icons/view-fullscreen.svg</file>
         <file>icons/zoom-fit-best.svg</file>
+        <file>icons/view-top.svg</file>
+        <file>icons/view-front.svg</file>
+        <file>icons/view-right.svg</file>
+        <file>icons/view-iso.svg</file>
+        <file>icons/view-reset.svg</file>
         <file>doc/demo.ngc</file>
         <file>doc/demos/circle.ngc</file>
         <file>doc/demos/square.ngc</file>
