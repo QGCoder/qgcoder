@@ -568,18 +568,14 @@ void View::setIsoView()
     resetCamView();
 }
 
-/// Backs the camera off far enough for the whole path to fit, in both axes.
+/// Frames the whole tool path. In orthographic mode the projected size is
+/// fixed by m_sceneRadius, so m_distance only needs to bracket the scene for
+/// the near/far clipping planes.
 void View::showEntireScene()
 {
     m_target = m_sceneCenter;
-
-    const float halfFovY = qDegreesToRadians(m_fovY) * 0.5f;
-    const float aspect = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-    const float halfFovX = std::atan(std::tan(halfFovY) * aspect);
-
-    const float distV = m_sceneRadius / std::sin(halfFovY);
-    const float distH = m_sceneRadius / std::sin(std::max(halfFovX, 1e-3f));
-    m_distance = std::max(distV, distH) * 1.05f;
+    m_distance = m_sceneRadius * 4.0f;
+    m_orthoZoom = 1.0f;
     update();
 }
 
@@ -593,18 +589,37 @@ QMatrix4x4 View::viewMatrix() const
     return m;
 }
 
-/// \returns the perspective projection, with the clipping planes placed to
-///          keep the whole scene between them wherever the camera is
+/// \returns the orthographic (isometric) projection, with the clipping planes
+///          placed to keep the whole scene between them wherever the camera is
 QMatrix4x4 View::projectionMatrix() const
 {
     const float aspect = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-    // keep the whole scene between the clipping planes wherever the camera is
-    const float reach = m_distance + (m_target - m_sceneCenter).length() + m_sceneRadius;
-    const float zFar = std::max(reach * 2.0f, 1e-2f);
-    const float zNear = std::max(zFar * 1e-4f, m_distance - m_sceneRadius * 2.0f);
+
+    // half-width/height of the ortho view volume, framing the scene with a 10% margin
+    const float extent = m_sceneRadius * 1.1f / m_orthoZoom;
+
+    float left, right, bottom, top;
+    if (aspect >= 1.0f) {
+        // wider than tall: extend horizontally
+        right = extent * aspect;
+        left = -right;
+        top = extent;
+        bottom = -extent;
+    } else {
+        // taller than wide: extend vertically
+        right = extent;
+        left = -extent;
+        top = extent / aspect;
+        bottom = -top;
+    }
+
+    // near/far bracket the camera position and scene along the line of sight
+    const float reach = m_distance + m_sceneRadius;
+    const float zNear = std::max(m_distance - reach, 1e-3f);
+    const float zFar = m_distance + reach;
 
     QMatrix4x4 m;
-    m.perspective(m_fovY, aspect, zNear, zFar);
+    m.ortho(left, right, bottom, top, zNear, zFar);
     return m;
 }
 
@@ -631,9 +646,12 @@ void View::pan(QPointF delta)
 {
     if (height() <= 0)
         return;
-    // one pixel of drag moves the scene by one pixel at the depth of the target
-    const float halfFovY = qDegreesToRadians(m_fovY) * 0.5f;
-    const float scale = 2.0f * m_distance * std::tan(halfFovY) / static_cast<float>(height());
+    // one pixel of drag moves the scene by one pixel in world units.
+    // Orthographic projection: scale is fixed by the view volume, not distance.
+    const float aspect = static_cast<float>(width()) / static_cast<float>(height());
+    const float extent = m_sceneRadius * 1.1f;
+    const float visibleHeight = (aspect >= 1.0f) ? 2.0f * extent : 2.0f * extent / aspect;
+    const float scale = visibleHeight / static_cast<float>(height());
 
     const QVector3D right = m_orientation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f));
     const QVector3D up = m_orientation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f));
@@ -643,13 +661,12 @@ void View::pan(QPointF delta)
     update();
 }
 
-/// Moves the camera along its line of sight, 10% per step, clamped so the
-/// scene can neither be left behind nor turned inside out.
+/// Zooms the orthographic view, 10% per step.
 /// \param steps wheel notches or their fraction; positive zooms in
 void View::zoom(float steps)
 {
-    m_distance *= std::pow(1.1f, -steps);
-    m_distance = std::clamp(m_distance, m_sceneRadius * 1e-3f, m_sceneRadius * 1e4f);
+    m_orthoZoom *= std::pow(1.1f, steps);
+    m_orthoZoom = std::clamp(m_orthoZoom, 1e-3f, 1e4f);
     update();
 }
 

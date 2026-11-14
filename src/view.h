@@ -213,8 +213,8 @@ private:
     QVector3D m_target;              ///< the point the camera looks at
     QVector3D m_sceneCenter;         ///< middle of the tool path
     float m_sceneRadius = 1.0f;      ///< radius of the sphere holding it
-    float m_distance = 4.0f;         ///< camera distance from the target
-    float m_fovY = 45.0f;            ///< vertical field of view, degrees
+    float m_distance = 4.0f;         ///< camera distance from the target (clipping planes only)
+    float m_orthoZoom = 1.0f;        ///< orthographic zoom factor (1.0 = fit scene)
 
     QPoint m_lastPos;                ///< cursor at the last mouse event
     Qt::MouseButton m_dragButton = Qt::NoButton;  ///< button driving the drag
