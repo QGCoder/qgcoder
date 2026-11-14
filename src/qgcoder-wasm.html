@@ -71,7 +71,6 @@
         };
 
         // Fallback: simulate progress if qtloader never reports real progress.
-        // Stops at 95% so it's clear this is simulated, not complete.
         var fallbackProgress = 0;
         window.__qgcoderFallbackTimer = setInterval(function() {
             if (fallbackProgress < 95) {
@@ -82,6 +81,15 @@
                 if (txt) txt.textContent = 'Loading QGCoder\u2026 ' + fallbackProgress + '%';
             }
         }, 50);
+
+        // Guaranteed: hide the overlay after 20 seconds so the app is always visible,
+        // even if the canvas is never detected.
+        setTimeout(function() {
+            clearInterval(window.__qgcoderFallbackTimer);
+            window.__qgcoderFallbackTimer = null;
+            var overlay = document.getElementById('qgcoder-loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }, 20000);
 
         // Poll for Qt's canvas: when qtloader finishes loading the app it
         // creates a full-screen canvas. Hide our overlay so the app shows.
