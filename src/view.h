@@ -85,6 +85,11 @@ public slots:
     /// re-fit (when auto-zoom is on) and repaint
     void refresh();
 
+    /// set the current tool position during playback
+    void setToolPosition(double x, double y, double z);
+    /// clear the tool position marker
+    void clearToolPosition();
+
     /// frame the whole tool path
     void showEntireScene();
     /// back to the default viewpoint
@@ -210,6 +215,14 @@ private:
     bool m_autoZoom = true;          ///< reframe whenever the path changes
     bool m_drawAxis = true;          ///< draw the origin axes
     bool m_drawGrid = true;          ///< draw the XY grid
+
+    // --- playback tool position ------------------------------------------
+    g2m::Point m_toolPos;            ///< current tool position during playback
+    bool m_toolPosValid = false;     ///< true while playback is showing a position
+#ifndef Q_OS_WASM
+    QOpenGLBuffer m_toolVbo{QOpenGLBuffer::VertexBuffer};  ///< tool marker vertices
+    int m_toolCount = 0;             ///< vertices in m_toolVbo
+#endif
 
     QElapsedTimer m_fpsTimer;        ///< since the last fpsChanged()
     int m_fpsFrames = 0;             ///< frames drawn since then

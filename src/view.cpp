@@ -136,6 +136,7 @@ void View::cleanupGl()
     makeCurrent();
     m_pathVbo.destroy();
     m_decorVbo.destroy();
+    m_toolVbo.destroy();
     m_vao.destroy();
     m_program.removeAllShaders();
     doneCurrent();
@@ -281,6 +282,51 @@ void View::setAxisIsDrawn(bool draw)
 void View::setGridIsDrawn(bool draw)
 {
     m_drawGrid = draw;
+    update();
+}
+
+/// Set the current tool position during playback and rebuild the tool marker.
+/// \param x \param y \param z machine coordinates of the tool tip
+void View::setToolPosition(double x, double y, double z)
+{
+    {
+        const QMutexLocker locker(&m_mutex);
+        m_toolPos = g2m::Point(x, y, z);
+        m_toolPosValid = true;
+    }
+
+#ifndef Q_OS_WASM
+    // three short axis lines crossing at the tool tip, each 4 units long
+    const double h = 2.0;
+    std::vector<float> verts;
+    verts.reserve(18);
+    appendVertex(verts, m_toolPos.x - h, m_toolPos.y,     m_toolPos.z);
+    appendVertex(verts, m_toolPos.x + h, m_toolPos.y,     m_toolPos.z);
+    appendVertex(verts, m_toolPos.x,     m_toolPos.y - h, m_toolPos.z);
+    appendVertex(verts, m_toolPos.x,     m_toolPos.y + h, m_toolPos.z);
+    appendVertex(verts, m_toolPos.x,     m_toolPos.y,     m_toolPos.z - h);
+    appendVertex(verts, m_toolPos.x,     m_toolPos.y,     m_toolPos.z + h);
+
+    m_toolVbo.bind();
+    m_toolVbo.allocate(verts.data(), static_cast<int>(verts.size() * sizeof(float)));
+    m_toolVbo.release();
+    m_toolCount = static_cast<int>(verts.size() / 3);
+#endif
+
+    update();
+}
+
+/// Clear the tool position marker (e.g. when playback stops).
+void View::clearToolPosition()
+{
+    {
+        const QMutexLocker locker(&m_mutex);
+        m_toolPosValid = false;
+    }
+#ifndef Q_OS_WASM
+    m_toolCount = 0;
+    m_toolVbo.destroy();
+#endif
     update();
 }
 
@@ -604,6 +650,22 @@ void View::paintEvent(QPaintEvent *)
     drawLines(p, mvp, m_traverseVerts, kTraverseColor, 0, m_traverseCount);
     drawLines(p, mvp, m_feedVerts, kFeedColor, 0, m_feedCount);
 
+    // the playback tool position marker
+    if (m_toolPosValid) {
+        const double h = 2.0;
+        std::vector<float> verts;
+        verts.reserve(18);
+        appendVertex(verts, m_toolPos.x - h, m_toolPos.y,     m_toolPos.z);
+        appendVertex(verts, m_toolPos.x + h, m_toolPos.y,     m_toolPos.z);
+        appendVertex(verts, m_toolPos.x,     m_toolPos.y - h, m_toolPos.z);
+        appendVertex(verts, m_toolPos.x,     m_toolPos.y + h, m_toolPos.z);
+        appendVertex(verts, m_toolPos.x,     m_toolPos.y,     m_toolPos.z - h);
+        appendVertex(verts, m_toolPos.x,     m_toolPos.y,     m_toolPos.z + h);
+        const QColor kToolColor(255, 0, 255);
+        p.setPen(QPen(kToolColor, 2.0));
+        drawLines(p, mvp, verts, kToolColor, 0, 6);
+    }
+
     ++m_fpsFrames;
     const qint64 elapsed = m_fpsTimer.elapsed();
     if (elapsed > 500) {
@@ -724,6 +786,18 @@ void View::paintGL()
             drawLines(mvp, kTraverseColor, 0, m_traverseCount);
             drawLines(mvp, kFeedColor, m_traverseCount, m_feedCount);
             m_pathVbo.release();
+
+            // the playback tool position marker
+            if (m_toolPosValid && m_toolCount > 0) {
+                m_toolVbo.bind();
+                m_program.enableAttributeArray(0);
+                m_program.setAttributeBuffer(0, GL_FLOAT, 0, 3);
+                glLineWidth(2.0f);
+                const QColor kToolColor(255, 0, 255);
+                m_program.setUniformValue(m_colorLoc, QVector4D(kToolColor.redF(), kToolColor.greenF(), kToolColor.blueF(), 1.0f));
+                glDrawArrays(GL_LINES, 0, m_toolCount);
+                m_toolVbo.release();
+            }
         }
         m_program.release();
     }

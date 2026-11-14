@@ -15,6 +15,7 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QStyle>
 #include <QTextStream>
 #include <QThread>
 #include <QTimer>
@@ -54,6 +55,40 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
 
     createG2mWorker();
     setupConnections();
+
+    gPlayer = new g2m::GPlayer();
+    gPlayer->setParent(this);
+    playbackTimer = new QTimer(this);
+    playbackTimer->setInterval(33); // ~30 frames per second
+
+    // standard media icons, no extra image files needed
+    ui->action_Playback_Play->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    ui->action_Playback_Stop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+
+    // feed the finished tool path to the player so it can be simulated
+    connect(g2mWorker, &g2m::G2mWorker::signalCanonLines,
+            this, [this](const QVector<g2m::canonLine *> &lines) {
+                gPlayer->stop();
+                for (g2m::canonLine *l : lines)
+                    gPlayer->appendCanonLine(l);
+                updatePlaybackButtons();
+            });
+
+    // show the moving tool in the 3D view
+    connect(gPlayer, &g2m::GPlayer::signalToolPosition,
+            view, [this](double x, double y, double z, int, int, double) {
+                view->setToolPosition(x, y, z);
+            }, Qt::QueuedConnection);
+
+    // report progress in the status bar
+    connect(gPlayer, &g2m::GPlayer::signalProgress,
+            this, [this](int p, int, double t, bool) {
+                statusBar()->showMessage(
+                    tr("Playback: %1% (%2 s)").arg(p).arg(t, 0, 'f', 2), 2000);
+            });
+
+    connect(playbackTimer, &QTimer::timeout, this, &MainWindow::playbackStep);
 
     home_dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     if (!home_dir.endsWith(u'/'))
@@ -111,6 +146,10 @@ void MainWindow::setupConnections()
     connect(ui->actionZoom_out, &QAction::triggered, this, &MainWindow::zoomOut);
     connect(ui->action_Issues, &QAction::triggered, this, &MainWindow::helpIssues);
     connect(ui->action_Chat, &QAction::triggered, this, &MainWindow::helpChat);
+
+    connect(ui->action_Playback_Play, &QAction::triggered, this, &MainWindow::playbackPlay);
+    connect(ui->action_Playback_Pause, &QAction::triggered, this, &MainWindow::playbackPause);
+    connect(ui->action_Playback_Stop, &QAction::triggered, this, &MainWindow::playbackStop);
 
     connect(ui->action_Demo_Circle, &QAction::triggered,
             this, [this] { loadDemoResource(u":/doc/demos/circle.ngc"_s); });
@@ -352,6 +391,57 @@ void MainWindow::loadDemoResource(const QString &resourcePath)
     openFile = path;
     if (openInViewer(openFile) == 0)
         openInBrowser(openFile);
+}
+
+/// Start playback of the loaded tool path.
+void MainWindow::playbackPlay()
+{
+    if (!gPlayer)
+        return;
+    playbackActive = true;
+    playbackTimer->start();
+    gPlayer->play();
+    updatePlaybackButtons();
+}
+
+/// Pause playback.
+void MainWindow::playbackPause()
+{
+    if (!gPlayer)
+        return;
+    playbackActive = false;
+    playbackTimer->stop();
+    gPlayer->pause();
+    updatePlaybackButtons();
+}
+
+/// Stop playback and reset to the start of the program.
+void MainWindow::playbackStop()
+{
+    if (!gPlayer)
+        return;
+    playbackActive = false;
+    playbackTimer->stop();
+    gPlayer->stop();
+    view->clearToolPosition();
+    statusBar()->clearMessage();
+    updatePlaybackButtons();
+}
+
+/// Advance playback by one step; called by m_playbackTimer while playing.
+void MainWindow::playbackStep()
+{
+    if (!gPlayer || !playbackActive)
+        return;
+    gPlayer->slotRequestMove();
+}
+
+/// Re-enable/disable the playback buttons to match the current state.
+void MainWindow::updatePlaybackButtons()
+{
+    ui->action_Playback_Play->setEnabled(!playbackActive);
+    ui->action_Playback_Pause->setEnabled(playbackActive);
+    ui->action_Playback_Stop->setEnabled(playbackActive);
 }
 
 /// File / Open. The desktop build asks for a path; the browser build takes

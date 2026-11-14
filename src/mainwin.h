@@ -8,12 +8,14 @@
 #include <QProgressBar>
 #include <QSettings>
 #include <QString>
+#include <QTimer>
 
 #include <memory>
 
 #include <QGCodeEditor/QGCodeEditor.h>
 
 #include "g2m/g2mworker.h"
+#include "g2m/gplayer.hpp"
 #include "settings_dlg.h"
 #include "view.h"
 
@@ -72,6 +74,17 @@ public slots:
     /// Load one of the demo g-code files compiled into the resources.
     /// \param resourcePath the qrc path of the .ngc file to load
     void loadDemoResource(const QString &resourcePath);
+
+    /// start playback of the loaded tool path
+    void playbackPlay();
+    /// pause playback
+    void playbackPause();
+    /// stop playback and reset to the start
+    void playbackStop();
+    /// advance the playback by one step (driven by m_playbackTimer)
+    void playbackStep();
+    /// update play/pause/stop button enablement from the current state
+    void updatePlaybackButtons();
 
 signals:
     /// tell the worker which tool table to use \param s the path, may be empty
@@ -132,6 +145,11 @@ private: // data
     int fontSize = 12;      ///< point size of the text panes
 
     QSettings settings;     ///< geometry, paths and the command pane
+
+    // --- playback ---------------------------------------------------------
+    g2m::GPlayer *gPlayer = nullptr;   ///< steps through the canon lines
+    QTimer *playbackTimer = nullptr;   ///< ticks slotRequestMove() while playing
+    bool playbackActive = false;       ///< true while play is pressed (not paused)
 };
 
 #endif // MAINWINDOW_H

@@ -218,6 +218,9 @@
    <addaction name="separator"/>
    <addaction name="action_AutoZoom"/>
    <addaction name="separator"/>
+   <addaction name="action_Playback_Play"/>
+   <addaction name="action_Playback_Pause"/>
+   <addaction name="action_Playback_Stop"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget_2">
    <property name="windowTitle">
@@ -449,6 +452,30 @@
    </property>
    <property name="toolTip">
     <string>The full demo (pocket, bore, chamfer).</string>
+   </property>
+  </action>
+  <action name="action_Playback_Play">
+   <property name="text">
+    <string>&amp;Play</string>
+   </property>
+   <property name="toolTip">
+    <string>Start playback of the tool path.</string>
+   </property>
+  </action>
+  <action name="action_Playback_Pause">
+   <property name="text">
+    <string>&amp;Pause</string>
+   </property>
+   <property name="toolTip">
+    <string>Pause playback.</string>
+   </property>
+  </action>
+  <action name="action_Playback_Stop">
+   <property name="text">
+    <string>&amp;Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop playback and reset.</string>
    </property>
   </action>
  </widget>
