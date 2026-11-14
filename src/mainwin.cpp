@@ -501,22 +501,22 @@ void MainWindow::toggleSplitView()
     m_splitView = !m_splitView;
 
     if (m_splitView) {
-        // build a 2x2 grid of 4 views
-        viewContainer = new QWidget(this);
-        auto *layout = new QGridLayout(viewContainer);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(2);
-        for (int i = 0; i < 4; ++i) {
-            m_views[i]->show();
-            layout->addWidget(m_views[i], i / 2, i % 2);
+        // build a 2x2 grid of 4 views (create the container once)
+        if (!viewContainer) {
+            viewContainer = new QWidget(this);
+            auto *layout = new QGridLayout(viewContainer);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(2);
+            for (int i = 0; i < 4; ++i)
+                layout->addWidget(m_views[i], i / 2, i % 2);
         }
+        for (int i = 0; i < 4; ++i)
+            m_views[i]->show();
         setCentralWidget(viewContainer);
     } else {
         // back to a single view
         for (int i = 0; i < 4; ++i)
             m_views[i]->hide();
-        viewContainer->deleteLater();
-        viewContainer = nullptr;
         setCentralWidget(view);
         view->show();
         view->resetCamView();
