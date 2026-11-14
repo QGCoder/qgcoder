@@ -66,10 +66,12 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
     ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
     ui->action_Playback_Stop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
-    // feed the finished tool path to the player so it can be simulated
+    // feed the finished tool path to the player so it can be simulated.
+    // clear() drops the previous file's canon lines so playback always runs
+    // on the freshly loaded program, never on a mix of old and new.
     connect(g2mWorker, &g2m::G2mWorker::signalCanonLines,
             this, [this](const QVector<g2m::canonLine *> &lines) {
-                gPlayer->stop();
+                gPlayer->clear();
                 for (g2m::canonLine *l : lines)
                     gPlayer->appendCanonLine(l);
                 updatePlaybackButtons();

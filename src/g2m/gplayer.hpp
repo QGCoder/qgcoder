@@ -178,6 +178,19 @@ class GPlayer : public QObject {
         void appendCanonLine( canonLine* l) {
             lines.push_back(l);
         }
+        /// drop every canon line and reset playback state
+        void clear() {
+            lines.clear();
+            first = true;
+            current_line = 0;
+            m = 0;
+            move_length = 0.0;
+            n_samples = 0;
+            interval_size = 0.0;
+            move_done = false;
+            total_length = 0.0;
+            total_time = 0.0;
+        }
 
     signals:
         /// signal a new tool position
