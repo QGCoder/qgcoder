@@ -756,7 +756,7 @@ void View::paintEvent(QPaintEvent *)
     // the already-traversed playback path, painted pink (LinuxCNC Axis style)
     if (m_traversedPath.size() >= 2) {
         const QColor kTraversedColor(255, 105, 180); // hot pink
-        p.setPen(QPen(kTraversedColor, 2.0));
+        p.setPen(QPen(kTraversedColor, 3.0));
         std::vector<float> verts;
         // duplicate interior points for continuous segments (drawLines draws pairs)
         {
@@ -918,7 +918,7 @@ void View::paintGL()
                 m_traversedVbo.bind();
                 m_program.enableAttributeArray(0);
                 m_program.setAttributeBuffer(0, GL_FLOAT, 0, 3);
-                glLineWidth(2.0f);
+                glLineWidth(3.0f);
                 const QColor kTraversedColor(255, 105, 180); // hot pink
                 m_program.setUniformValue(m_colorLoc, QVector4D(kTraversedColor.redF(), kTraversedColor.greenF(), kTraversedColor.blueF(), 1.0f));
                 glDrawArrays(GL_LINES, 0, m_traversedCount);
