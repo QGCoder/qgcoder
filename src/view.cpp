@@ -481,6 +481,36 @@ void View::resetCamView()
     showEntireScene();
 }
 
+/// Look down the Z axis onto the XY plane (camera above, looking down).
+void View::setTopView()
+{
+    m_orientation = QQuaternion::rotationTo(QVector3D(0.0f, 0.0f, 1.0f),
+                                            QVector3D(0.0f, 0.0f, 1.0f));
+    showEntireScene();
+}
+
+/// Look along the Y axis onto the XZ plane (camera in front, looking toward -Y).
+void View::setFrontView()
+{
+    m_orientation = QQuaternion::rotationTo(QVector3D(0.0f, 0.0f, 1.0f),
+                                            QVector3D(0.0f, 1.0f, 0.0f));
+    showEntireScene();
+}
+
+/// Look along the X axis onto the YZ plane (camera from the right, looking toward -X).
+void View::setRightView()
+{
+    m_orientation = QQuaternion::rotationTo(QVector3D(0.0f, 0.0f, 1.0f),
+                                            QVector3D(1.0f, 0.0f, 0.0f));
+    showEntireScene();
+}
+
+/// Restore the default isometric viewpoint.
+void View::setIsoView()
+{
+    resetCamView();
+}
+
 /// Backs the camera off far enough for the whole path to fit, in both axes.
 void View::showEntireScene()
 {

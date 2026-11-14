@@ -221,6 +221,12 @@
    <addaction name="action_Playback_Play"/>
    <addaction name="action_Playback_Pause"/>
    <addaction name="action_Playback_Stop"/>
+   <addaction name="separator"/>
+   <addaction name="action_View_Top"/>
+   <addaction name="action_View_Front"/>
+   <addaction name="action_View_Right"/>
+   <addaction name="action_View_Iso"/>
+   <addaction name="action_View_Reset"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget_2">
    <property name="windowTitle">
@@ -476,6 +482,46 @@
    </property>
    <property name="toolTip">
     <string>Stop playback and reset.</string>
+   </property>
+  </action>
+  <action name="action_View_Top">
+   <property name="text">
+    <string>&amp;Top</string>
+   </property>
+   <property name="toolTip">
+    <string>Top view (XY plane).</string>
+   </property>
+  </action>
+  <action name="action_View_Front">
+   <property name="text">
+    <string>&amp;Front</string>
+   </property>
+   <property name="toolTip">
+    <string>Front view (XZ plane).</string>
+   </property>
+  </action>
+  <action name="action_View_Right">
+   <property name="text">
+    <string>&amp;Right</string>
+   </property>
+   <property name="toolTip">
+    <string>Right view (YZ plane).</string>
+   </property>
+  </action>
+  <action name="action_View_Iso">
+   <property name="text">
+    <string>&amp;Iso</string>
+   </property>
+   <property name="toolTip">
+    <string>Isometric view.</string>
+   </property>
+  </action>
+  <action name="action_View_Reset">
+   <property name="text">
+    <string>&amp;Home</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset view to default.</string>
    </property>
   </action>
  </widget>

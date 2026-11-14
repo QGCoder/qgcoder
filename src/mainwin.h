@@ -9,6 +9,7 @@
 #include <QSettings>
 #include <QString>
 #include <QTimer>
+#include <QKeyEvent>
 
 #include <memory>
 
@@ -96,6 +97,8 @@ signals:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    /// Tab toggles between single and 4-way split 3D view
+    void keyPressEvent(QKeyEvent *event) override;
 
 private: // functions
     void loadSettings();
@@ -112,6 +115,13 @@ private: // functions
     void applyFontSize();
     void createG2mWorker();
     void runCommand();
+
+    /// toggle between single and 4-way split 3D view
+    void toggleSplitView();
+    /// give one view in the split layout a standard orientation
+    void setupViewOrientation(View *v, int index);
+    /// broadcast a tool-path change to every active view
+    void syncViewPaths();
 
 private: // data
     QString home_dir;       ///< where the file dialogs start, trailing '/'
@@ -150,6 +160,11 @@ private: // data
     g2m::GPlayer *gPlayer = nullptr;   ///< steps through the canon lines
     QTimer *playbackTimer = nullptr;   ///< ticks slotRequestMove() while playing
     bool playbackActive = false;       ///< true while play is pressed (not paused)
+
+    // --- split view -------------------------------------------------------
+    QWidget *viewContainer = nullptr;  ///< holds the 4 views when split
+    View *m_views[4] = {nullptr, nullptr, nullptr, nullptr};  ///< the 4 split views
+    bool m_splitView = false;          ///< true while the 4-way split is active
 };
 
 #endif // MAINWINDOW_H

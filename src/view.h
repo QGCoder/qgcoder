@@ -95,6 +95,12 @@ public slots:
     /// back to the default viewpoint
     void resetCamView();
 
+    /// standard orthographic view orientations
+    void setTopView();    /// look down the Z axis onto the XY plane
+    void setFrontView();  /// look along the Y axis onto the XZ plane
+    void setRightView();  /// look along the X axis onto the YZ plane
+    void setIsoView();    /// default isometric viewpoint
+
     void setAxisIsDrawn(bool draw = true);
     void setGridIsDrawn(bool draw = true);
 

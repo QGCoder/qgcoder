@@ -66,7 +66,8 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
     ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
     ui->action_Playback_Stop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
-    // feed the finished tool path to the player so it can be simulated.
+    // feed the finished tool path to the player and to every view so that
+    // the 4-way split shows the same geometry in all panes.
     // clear() drops the previous file's canon lines so playback always runs
     // on the freshly loaded program, never on a mix of old and new.
     connect(g2mWorker, &g2m::G2mWorker::signalCanonLines,
@@ -75,12 +76,18 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
                 for (g2m::canonLine *l : lines)
                     gPlayer->appendCanonLine(l);
                 updatePlaybackButtons();
+                syncViewPaths();
             });
 
-    // show the moving tool in the 3D view
+    // show the moving tool in every active 3D view
     connect(gPlayer, &g2m::GPlayer::signalToolPosition,
-            view, [this](double x, double y, double z, int, int, double) {
-                view->setToolPosition(x, y, z);
+            this, [this](double x, double y, double z, int, int, double) {
+                if (m_splitView) {
+                    for (int i = 0; i < 4; ++i)
+                        m_views[i]->setToolPosition(x, y, z);
+                } else {
+                    view->setToolPosition(x, y, z);
+                }
             }, Qt::QueuedConnection);
 
     // report progress in the status bar
@@ -91,6 +98,20 @@ MainWindow::MainWindow(QWidget *parent, bool fileMode, const QString &fileName)
             });
 
     connect(playbackTimer, &QTimer::timeout, this, &MainWindow::playbackStep);
+
+    // create the 4 split views up front (hidden until split mode is activated)
+    for (int i = 0; i < 4; ++i) {
+        m_views[i] = new View(this);
+        m_views[i]->hide();
+        setupViewOrientation(m_views[i], i);
+    }
+    // all views share the same fps label
+    for (int i = 0; i < 4; ++i) {
+        connect(m_views[i], &View::fpsChanged,
+                this, [this](double fps) {
+                    fpsLabel->setText(tr("%1 fps").arg(fps, 0, 'f', 1));
+                });
+    }
 
     home_dir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     if (!home_dir.endsWith(u'/'))
@@ -167,6 +188,22 @@ void MainWindow::setupConnections()
             this, [this] { loadDemoResource(u":/doc/demos/text.ngc"_s); });
     connect(ui->action_Demo_Demo, &QAction::triggered,
             this, [this] { loadDemoResource(u":/doc/demos/demo.ngc"_s); });
+
+    connect(ui->action_View_Top, &QAction::triggered, this, [this] {
+        view->setTopView();  syncViewPaths();
+    });
+    connect(ui->action_View_Front, &QAction::triggered, this, [this] {
+        view->setFrontView(); syncViewPaths();
+    });
+    connect(ui->action_View_Right, &QAction::triggered, this, [this] {
+        view->setRightView(); syncViewPaths();
+    });
+    connect(ui->action_View_Iso, &QAction::triggered, this, [this] {
+        view->setIsoView(); syncViewPaths();
+    });
+    connect(ui->action_View_Reset, &QAction::triggered, this, [this] {
+        view->resetCamView(); syncViewPaths();
+    });
 
 #if QT_CONFIG(process)
     connect(commandProcess, &QProcess::finished, this, [this](int, QProcess::ExitStatus) {
@@ -425,7 +462,12 @@ void MainWindow::playbackStop()
     playbackActive = false;
     playbackTimer->stop();
     gPlayer->stop();
-    view->clearToolPosition();
+    if (m_splitView) {
+        for (int i = 0; i < 4; ++i)
+            m_views[i]->clearToolPosition();
+    } else {
+        view->clearToolPosition();
+    }
     statusBar()->clearMessage();
     updatePlaybackButtons();
 }
@@ -444,6 +486,74 @@ void MainWindow::updatePlaybackButtons()
     ui->action_Playback_Play->setEnabled(!playbackActive);
     ui->action_Playback_Pause->setEnabled(playbackActive);
     ui->action_Playback_Stop->setEnabled(playbackActive);
+}
+
+/// Toggle between a single 3D view and a 4-way split view (top, front,
+/// right, isometric) like popular CAD programs. Press Tab to switch.
+void MainWindow::toggleSplitView()
+{
+    m_splitView = !m_splitView;
+
+    if (m_splitView) {
+        // build a 2x2 grid of 4 views
+        viewContainer = new QWidget(this);
+        auto *layout = new QGridLayout(viewContainer);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(2);
+        for (int i = 0; i < 4; ++i) {
+            m_views[i]->show();
+            layout->addWidget(m_views[i], i / 2, i % 2);
+        }
+        setCentralWidget(viewContainer);
+    } else {
+        // back to a single view
+        for (int i = 0; i < 4; ++i)
+            m_views[i]->hide();
+        viewContainer->deleteLater();
+        viewContainer = nullptr;
+        setCentralWidget(view);
+        view->show();
+        view->resetCamView();
+    }
+    syncViewPaths();
+}
+
+/// Give one view in the split layout a standard orientation:
+/// 0 = top, 1 = front, 2 = right, 3 = iso.
+void MainWindow::setupViewOrientation(View *v, int index)
+{
+    switch (index) {
+    case 0: v->setTopView();    break;
+    case 1: v->setFrontView();  break;
+    case 2: v->setRightView();  break;
+    case 3: v->setIsoView();    break;
+    }
+}
+
+/// Broadcast the current tool path to every active view so all 4 split
+/// panes show the same geometry.
+void MainWindow::syncViewPaths()
+{
+    if (m_splitView) {
+        for (int i = 0; i < 4; ++i) {
+            m_views[i]->setAutoZoom(true);
+            m_views[i]->refresh();
+        }
+    } else {
+        view->setAutoZoom(true);
+        view->refresh();
+    }
+}
+
+/// Tab toggles the 4-way split view.
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Tab) {
+        toggleSplitView();
+        event->accept();
+        return;
+    }
+    QMainWindow::keyPressEvent(event);
 }
 
 /// File / Open. The desktop build asks for a path; the browser build takes
@@ -506,7 +616,13 @@ int MainWindow::openInViewer(const QString &filename)
     fin.close();
     fout.close();
 
-    view->clear();
+    // clear every active view (all 4 in split mode)
+    if (m_splitView) {
+        for (int i = 0; i < 4; ++i)
+            m_views[i]->clear();
+    } else {
+        view->clear();
+    }
 
     emit setToolTable(tooltable);
     emit setGcodeFile(gcodefile);
