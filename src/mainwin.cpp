@@ -541,12 +541,9 @@ void MainWindow::setupViewOrientation(View *v, int index)
 void MainWindow::syncViewPaths()
 {
     if (m_splitView) {
-        for (int i = 0; i < 4; ++i) {
-            m_views[i]->setAutoZoom(true);
+        for (int i = 0; i < 4; ++i)
             m_views[i]->refresh();
-        }
-    } else {
-        view->setAutoZoom(true);
+    } else if (view) {
         view->refresh();
     }
 }
