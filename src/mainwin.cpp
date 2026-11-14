@@ -435,6 +435,7 @@ void MainWindow::openInBrowser(const QString &filename)
 
     bLoading = true;
     ui->gcode->clear();
+    ui->stderror->clear();
 
     // Straight into the document, rather than a line at a time through
     // QGCodeEditor::appendNewPlainText(). That helper was doing two things we
