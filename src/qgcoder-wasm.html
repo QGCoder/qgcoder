@@ -12,105 +12,96 @@
             background: #00003b;
             color: #ffa700;
             font-family: "Courier New", Courier, monospace;
-            overflow: hidden;
         }
         /* Hide Qt's default "Qt for WebAssembly" loading screen */
-        #qt-loading,
-        .qt-loading,
-        #qt-logo,
-        .qt-logo,
-        #qt-loading-overlay,
-        .qt-loading-overlay {
+        #qt-loading, .qt-loading, #qt-logo, .qt-logo {
             display: none !important;
             visibility: hidden !important;
         }
-        /* Loading bar centered on screen - transparent background so app shows through */
-        #qgcoder-loading-container {
+        /* Small loading bar at top center - does not block the app */
+        #qgcoder-bar {
             position: fixed;
-            top: 50%;
+            top: 20px;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
             z-index: 9999;
             pointer-events: none;
         }
-        #qgcoder-loading {
+        #qgcoder-track {
             width: 420px;
             height: 24px;
             border: 2px solid #ffa700;
             box-sizing: border-box;
-            margin-top: 32px;
             overflow: hidden;
         }
-        #qgcoder-progress {
+        #qgcoder-fill {
             width: 0%;
             height: 100%;
             background: #ffa700;
             transition: width 0.05s ease-out;
         }
-        #qgcoder-loading-text {
-            margin-top: 14px;
+        #qgcoder-text {
+            margin-top: 10px;
             font-size: 14px;
             letter-spacing: 0.5px;
+            text-align: center;
         }
     </style>
     <script>
-        // window.qtConfig must be a global property set BEFORE qtloader.js loads,
-        // since Qt reads it at script load time.
+        // Set before qtloader.js loads
         window.qtConfig = {
             run: 'qgcoder',
-            onLoadingProgress: function(progress) {
-                var bar = document.getElementById('qgcoder-progress');
-                var txt = document.getElementById('qgcoder-loading-text');
-                if (bar) bar.style.width = Math.round(progress * 100) + '%';
-                if (txt) txt.textContent = 'Loading QGCoder\u2026 ' + Math.round(progress * 100) + '%';
+            onLoadingProgress: function(p) {
+                var f = document.getElementById('qgcoder-fill');
+                var t = document.getElementById('qgcoder-text');
+                if (f) f.style.width = Math.round(p * 100) + '%';
+                if (t) t.textContent = 'Loading QGCoder\u2026 ' + Math.round(p * 100) + '%';
             }
         };
 
-        var hidden = false;
-
-        function hideLoading() {
-            if (hidden) return;
-            hidden = true;
-            clearInterval(window.__qgcoderFallbackTimer);
-            window.__qgcoderFallbackTimer = null;
-            var container = document.getElementById('qgcoder-loading-container');
-            if (container) container.style.display = 'none';
+        var done = false;
+        function end() {
+            if (done) return;
+            done = true;
+            clearInterval(window.__qgcFb);
+            window.__qgcFb = null;
+            var b = document.getElementById('qgcoder-bar');
+            if (b) b.style.display = 'none';
         }
 
-        // Fallback: simulate progress if qtloader never reports real progress.
-        var fallbackProgress = 0;
-        window.__qgcoderFallbackTimer = setInterval(function() {
-            if (fallbackProgress < 100) {
-                fallbackProgress += 1;
-                var bar = document.getElementById('qgcoder-progress');
-                var txt = document.getElementById('qgcoder-loading-text');
-                if (bar) bar.style.width = fallbackProgress + '%';
-                if (txt) txt.textContent = 'Loading QGCoder\u2026 ' + fallbackProgress + '%';
+        // Fallback progress
+        var fp = 0;
+        window.__qgcFb = setInterval(function() {
+            if (fp < 100) {
+                fp += 1;
+                var f = document.getElementById('qgcoder-fill');
+                var t = document.getElementById('qgcoder-text');
+                if (f) f.style.width = fp + '%';
+                if (t) t.textContent = 'Loading QGCoder\u2026 ' + fp + '%';
             } else {
-                setTimeout(hideLoading, 300);
-                clearInterval(window.__qgcoderFallbackTimer);
-                window.__qgcoderFallbackTimer = null;
+                setTimeout(end, 300);
+                clearInterval(window.__qgcFb);
+                window.__qgcFb = null;
             }
         }, 50);
 
-        // Poll for Qt's canvas.
+        // Detect when Qt's canvas appears
         setInterval(function() {
-            if (hidden) return;
-            var canvas = document.querySelector('canvas');
-            if (canvas) hideLoading();
+            if (done) return;
+            if (document.querySelector('canvas')) end();
         }, 100);
 
-        // Guaranteed: hide after 8 seconds.
-        setTimeout(hideLoading, 8000);
+        // Guaranteed end after 8 seconds
+        setTimeout(end, 8000);
     </script>
     <script src="qtloader.js"></script>
 </head>
 <body>
-    <div id="qgcoder-loading-container">
-        <div id="qgcoder-loading">
-            <div id="qgcoder-progress"></div>
+    <div id="qgcoder-bar">
+        <div id="qgcoder-track">
+            <div id="qgcoder-fill"></div>
         </div>
-        <div id="qgcoder-loading-text">Loading QGCoder\u2026 0%</div>
+        <div id="qgcoder-text">Loading QGCoder\u2026 0%</div>
     </div>
 </body>
 </html>
