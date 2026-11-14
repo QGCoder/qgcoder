@@ -24,18 +24,14 @@
             display: none !important;
             visibility: hidden !important;
         }
-        #qgcoder-loading-overlay {
+        /* Loading bar centered on screen - transparent background so app shows through */
+        #qgcoder-loading-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #00003b;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 9999;
+            pointer-events: none;
         }
         #qgcoder-loading {
             width: 420px;
@@ -70,19 +66,18 @@
             }
         };
 
-        var overlayShown = true;
+        var hidden = false;
 
-        function hideOverlay() {
-            if (!overlayShown) return;
-            overlayShown = false;
+        function hideLoading() {
+            if (hidden) return;
+            hidden = true;
             clearInterval(window.__qgcoderFallbackTimer);
             window.__qgcoderFallbackTimer = null;
-            var overlay = document.getElementById('qgcoder-loading-overlay');
-            if (overlay) overlay.style.display = 'none';
+            var container = document.getElementById('qgcoder-loading-container');
+            if (container) container.style.display = 'none';
         }
 
         // Fallback: simulate progress if qtloader never reports real progress.
-        // Runs all the way to 100% so the user never sees a stuck bar.
         var fallbackProgress = 0;
         window.__qgcoderFallbackTimer = setInterval(function() {
             if (fallbackProgress < 100) {
@@ -92,31 +87,26 @@
                 if (bar) bar.style.width = fallbackProgress + '%';
                 if (txt) txt.textContent = 'Loading QGCoder\u2026 ' + fallbackProgress + '%';
             } else {
-                // Reached 100%: hide overlay a moment later so the user sees completion.
-                setTimeout(hideOverlay, 300);
+                setTimeout(hideLoading, 300);
                 clearInterval(window.__qgcoderFallbackTimer);
                 window.__qgcoderFallbackTimer = null;
             }
         }, 50);
 
-        // Poll for Qt's canvas: when qtloader finishes loading the app it
-        // creates a full-screen canvas. Hide our overlay so the app shows.
+        // Poll for Qt's canvas.
         setInterval(function() {
-            if (!overlayShown) return;
+            if (hidden) return;
             var canvas = document.querySelector('canvas');
-            if (canvas) {
-                hideOverlay();
-            }
+            if (canvas) hideLoading();
         }, 100);
 
-        // Guaranteed: hide the overlay after 15 seconds at the latest so the
-        // app is always visible even if nothing else works.
-        setTimeout(hideOverlay, 15000);
+        // Guaranteed: hide after 8 seconds.
+        setTimeout(hideLoading, 8000);
     </script>
     <script src="qtloader.js"></script>
 </head>
 <body>
-    <div id="qgcoder-loading-overlay">
+    <div id="qgcoder-loading-container">
         <div id="qgcoder-loading">
             <div id="qgcoder-progress"></div>
         </div>
