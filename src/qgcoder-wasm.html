@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>QGCoder</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #00003b;
+            color: #ffa700;
+            font-family: "Courier New", Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        /* Hide Qt's default "Qt for WebAssembly" loading screen */
+        #qt-loading {
+            display: none !important;
+        }
+        #qgcoder-loading {
+            width: 420px;
+            height: 24px;
+            border: 2px solid #ffa700;
+            box-sizing: border-box;
+            margin-top: 32px;
+            position: relative;
+        }
+        #qgcoder-progress {
+            width: 0%;
+            height: 100%;
+            background: #ffa700;
+            transition: width 0.05s ease-out;
+        }
+        #qgcoder-loading-text {
+            margin-top: 14px;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+    </style>
+    <script src="qtloader.js"></script>
+    <script>
+        const qtConfig = {
+            run: 'qgcoder',
+            onLoadingProgress: function(progress) {
+                const pct = Math.round(progress * 100);
+                document.getElementById('qgcoder-progress').style.width = pct + '%';
+                document.getElementById('qgcoder-loading-text').textContent =
+                    'Loading QGCoder\u2026 ' + pct + '%';
+            }
+        };
+    </script>
+</head>
+<body>
+    <div id="qgcoder-loading">
+        <div id="qgcoder-progress"></div>
+    </div>
+    <div id="qgcoder-loading-text">Loading QGCoder\u2026 0%</div>
+</body>
+</html>
