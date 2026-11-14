@@ -438,25 +438,37 @@ void MainWindow::loadDemoResource(const QString &resourcePath)
         openInBrowser(openFile);
 }
 
-/// Start playback of the loaded tool path.
+/// Start playback of the loaded tool path from the beginning.
 void MainWindow::playbackPlay()
 {
     if (!gPlayer)
         return;
     playbackActive = true;
+    playbackPaused = false;
     playbackTimer->start();
     gPlayer->play();
     updatePlaybackButtons();
 }
 
-/// Pause playback.
+/// Toggle pause/resume of the playback animation.
+/// When playing, pauses; when paused, resumes from the same position.
 void MainWindow::playbackPause()
 {
     if (!gPlayer)
         return;
-    playbackActive = false;
-    playbackTimer->stop();
-    gPlayer->pause();
+    if (playbackActive) {
+        // currently playing: pause
+        playbackActive = false;
+        playbackPaused = true;
+        playbackTimer->stop();
+        gPlayer->pause();
+    } else if (playbackPaused) {
+        // currently paused: resume from where it left off
+        playbackActive = true;
+        playbackPaused = false;
+        playbackTimer->start();
+        gPlayer->play(); // play_flag is false after pause, so this restarts the step loop
+    }
     updatePlaybackButtons();
 }
 
@@ -466,6 +478,7 @@ void MainWindow::playbackStop()
     if (!gPlayer)
         return;
     playbackActive = false;
+    playbackPaused = false;
     playbackTimer->stop();
     gPlayer->stop();
     if (m_splitView) {
@@ -487,11 +500,27 @@ void MainWindow::playbackStep()
 }
 
 /// Re-enable/disable the playback buttons to match the current state.
+/// The Pause button toggles between "Pause" (playing) and "Resume" (paused).
 void MainWindow::updatePlaybackButtons()
 {
-    ui->action_Playback_Play->setEnabled(!playbackActive);
-    ui->action_Playback_Pause->setEnabled(playbackActive);
-    ui->action_Playback_Stop->setEnabled(playbackActive);
+    const bool playing = playbackActive;
+    const bool paused = playbackPaused;
+    const bool stopped = !playing && !paused;
+
+    ui->action_Playback_Play->setEnabled(stopped);
+    ui->action_Playback_Pause->setEnabled(playing || paused);
+    ui->action_Playback_Stop->setEnabled(playing || paused);
+
+    if (playing) {
+        ui->action_Playback_Pause->setText(tr("&Pause"));
+        ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    } else if (paused) {
+        ui->action_Playback_Pause->setText(tr("&Resume"));
+        ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    } else {
+        ui->action_Playback_Pause->setText(tr("&Pause"));
+        ui->action_Playback_Pause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    }
 }
 
 /// Toggle between a single 3D view and a 4-way split view (top, front,

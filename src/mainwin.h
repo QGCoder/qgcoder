@@ -159,7 +159,8 @@ private: // data
     // --- playback ---------------------------------------------------------
     g2m::GPlayer *gPlayer = nullptr;   ///< steps through the canon lines
     QTimer *playbackTimer = nullptr;   ///< ticks slotRequestMove() while playing
-    bool playbackActive = false;       ///< true while play is pressed (not paused)
+    bool playbackActive = false;       ///< true while the timer is running
+    bool playbackPaused = false;       ///< true when paused (not stopped, not playing)
 
     // --- split view -------------------------------------------------------
     QWidget *viewContainer = nullptr;  ///< holds the 4 views when split
