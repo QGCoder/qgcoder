@@ -324,10 +324,14 @@ void MainWindow::zoomOut()
 
 /// Re-applies the window style sheet, which carries the current font size
 /// along with the colour scheme.
+/// Re-applies the window style sheet, which carries the current font size
+/// along with the colour scheme. font-weight: bold (not the "font: bold"
+/// shorthand) so that font-family: "Courier" is preserved - Courier is a
+/// monospace font so every character has the same width.
 void MainWindow::applyFontSize()
 {
     setStyleSheet(u"QWidget { font-size: %1pt; font-family: \"Courier\"; "
-                  "background-color: #00003B; color: #FFA700; font: bold }"_s
+                  "background-color: #00003B; color: #FFA700; font-weight: bold }"_s
                       .arg(fontSize));
 }
 
