@@ -325,7 +325,6 @@ void View::clearToolPosition()
     }
 #ifndef Q_OS_WASM
     m_toolCount = 0;
-    m_toolVbo.destroy();
 #endif
     update();
 }
@@ -706,6 +705,8 @@ void View::initializeGL()
     m_pathVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     m_decorVbo.create();
     m_decorVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    m_toolVbo.create();
+    m_toolVbo.setUsagePattern(QOpenGLBuffer::DynamicDraw);
 
     glEnable(GL_DEPTH_TEST);
 #ifdef GL_LINE_SMOOTH
