@@ -487,6 +487,9 @@ void MainWindow::onOpenFile()
 /// \returns 0 when the run was started, -1 when either file could not be opened
 int MainWindow::openInViewer(const QString &filename)
 {
+    // loading a new file abandons any playback in progress
+    playbackStop();
+
     QFile fin(filename);
     QFile fout(gcodefile);
 
