@@ -28,7 +28,6 @@
             border: 2px solid #ffa700;
             box-sizing: border-box;
             margin-top: 32px;
-            position: relative;
         }
         #qgcoder-progress {
             width: 0%;
@@ -42,18 +41,20 @@
             letter-spacing: 0.5px;
         }
     </style>
-    <script src="qtloader.js"></script>
     <script>
-        const qtConfig = {
+        // Must be set before qtloader.js loads: Qt reads window.qtConfig
+        window.qtConfig = {
             run: 'qgcoder',
             onLoadingProgress: function(progress) {
                 const pct = Math.round(progress * 100);
-                document.getElementById('qgcoder-progress').style.width = pct + '%';
-                document.getElementById('qgcoder-loading-text').textContent =
-                    'Loading QGCoder\u2026 ' + pct + '%';
+                var bar = document.getElementById('qgcoder-progress');
+                var txt = document.getElementById('qgcoder-loading-text');
+                if (bar) bar.style.width = pct + '%';
+                if (txt) txt.textContent = 'Loading QGCoder\u2026 ' + pct + '%';
             }
         };
     </script>
+    <script src="qtloader.js"></script>
 </head>
 <body>
     <div id="qgcoder-loading">
