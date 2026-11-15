@@ -184,5 +184,3 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 * **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](src/g2m/g2m.hpp)
 * **The LinuxCNC project** - the RS274NGC G-code interpreter vendored in
   [`src/linuxcnc/`](src/linuxcnc/) (revision `bae3bfbdfb97e9bea4295afc6079e1c74a3e0958`) - [GPL-2.0](src/linuxcnc/LICENSE)
-* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in
-  [`src/rs274ngc/`](src/rs274ngc/) (2008) - [GPL-3.0-or-later](src/rs274ngc/LICENSE)
