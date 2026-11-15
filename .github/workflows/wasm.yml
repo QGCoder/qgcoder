@@ -110,12 +110,12 @@ jobs:
       run: |
         cmake --install build --prefix "$PWD/dist"
         mkdir -p site
-        cp dist/bin/qgcoder-wasm.html dist/bin/qgcoder.js \
+        cp dist/bin/qgcoder.html dist/bin/qgcoder.js \
            dist/bin/qgcoder.wasm dist/bin/qtloader.js dist/bin/qtlogo.svg site/
         # GitHub Pages serves index.html for a directory, and the Qt shell page
         # refers to its own files by relative name, so a copy under both names
         # works either way round.
-        cp site/qgcoder-wasm.html site/index.html
+        cp site/qgcoder.html site/index.html
         # without this, Pages runs the directory through Jekyll, which drops
         # files whose names begin with an underscore
         touch site/.nojekyll

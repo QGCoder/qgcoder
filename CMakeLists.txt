@@ -141,7 +141,7 @@ install(TARGETS qgcoder
 # install prefix is a directory a web server can be pointed straight at.
 if(EMSCRIPTEN)
     install(FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/qgcoder-wasm.html
+        $<TARGET_FILE_DIR:qgcoder>/qgcoder.html
         $<TARGET_FILE_DIR:qgcoder>/qgcoder.js
         $<TARGET_FILE_DIR:qgcoder>/qgcoder.wasm
         $<TARGET_FILE_DIR:qgcoder>/qtloader.js
