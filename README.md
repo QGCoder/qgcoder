@@ -126,8 +126,45 @@ survives. The *Settings* dialog still exists to point both at a real file.
 
 In the 3D view, drag with the left mouse button to orbit, with the right button to
 pan and with the middle button (or the wheel) to zoom. Double-click, ```Home``` or
-```Space``` frames the whole tool path, ```R``` returns to the default viewpoint, and
-```A``` and ```G``` toggle the axes and the grid.
+```Space``` resets the view to the default viewpoint and frames the whole tool path,
+```R``` returns to the default viewpoint, ```A``` and ```G``` toggle the axes and the
+grid. The 3D projection is orthographic (isometric), like a CAD program — object
+size does not change with camera distance.
+
+## File / Demos menu
+
+The *File* menu has a *Demos* submenu with seven ready-to-load sample g-code
+programs compiled into the application:
+
+- **Circle** — mill a 20 mm radius circle (G2 circular interpolation)
+- **Square pocket** — clear a square pocket in two depth passes
+- **Drilling pattern** — drill four holes with the G81 canned cycle
+- **Helical bore** — helically interpolate a bore down to Z-8
+- **Threading** — single-pass threading with G33
+- **Engraving** — simple rectangular engraving
+- **Demo** — the full demo (pocket, bore, chamfered rim)
+
+Each demo loads into the editor and the 3D tool-path view.
+
+## Playback simulation (CNC simulation)
+
+The toolbar has **Play / Pause / Stop** buttons that simulate g-code execution on
+the loaded tool path, stepping through the canon lines one sample at a time:
+
+- **Play** — starts playback from the beginning
+- **Pause / Resume** — toggles between pausing and resuming from the same position
+  (the button text switches between *Pause* and *Resume*)
+- **Stop** — stops playback and resets to the start of the program
+
+During playback a magenta crosshair marks the current tool position, and the
+already-traversed tool path is painted in hot pink (LinuxCNC Axis style). The
+status bar shows playback progress and elapsed time. Press **Tab** to toggle
+between a single 3D view and a 4-way split view showing Top / Front / Right /
+Isometric panes simultaneously — all panes share the same tool path, tool
+position marker and playback state.
+
+The toolbar also has view preset buttons: **Top**, **Front**, **Right**, **Iso**
+and **Home** (reset view).
 
 A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how you can interact inside ```qgcoder```.
 
