@@ -113,8 +113,12 @@ window in — which WebGL, having no context sharing, cannot do, and both
 contexts are lost the moment it is tried. There is nothing to accelerate here
 but coloured line segments, so projecting them on the CPU costs little.
 
-The RS274NGC G-code interpreter is built into ```qgcoder``` — there is no separate
-```rs274``` executable to install or point at. See [rs274ngc/README.md](src/rs274ngc/README.md).
+The RS274NGC G-code interpreter from LinuxCNC is built into ```qgcoder``` — there
+is no separate ```rs274``` executable to install or point at. See
+[src/linuxcnc/README.md](src/linuxcnc/README.md) for details on what was taken,
+what was left out (Python, HAL), and the one source-line change made to the
+upstream interpreter. The vendored revision is
+`bae3bfbdfb97e9bea4295afc6079e1c74a3e0958`.
 
 A fresh install does not block on a setup dialog: the desktop builds start with
 the editor's scratch G-code in a `qgcoder-scratch.ngc` in the OS's temp
@@ -178,4 +182,7 @@ A short [YouTube video](https://www.youtube.com/watch?v=9D3hMXP5-QM) shows, how 
 * **Mark Pictor** - `g2m` G-code-to-mesh interpreter core (`canonLine`, `canonMotion`, `canonMotionless`, `helicalMotion`, `linearMotion`, `machineStatus`, `nanotimer`, `lex_analyzer`, 2010) - [GPL-2.0-or-later](src/g2m/canonLine.hpp)
 * **Anders Wallin** - [aewallin](https://github.com/aewallin) - modifications to `g2m/g2m.hpp` / `g2m/g2m.cpp` (2011) - [GPL-2.0-or-later](src/g2m/g2m.hpp)
 * **Kazuyasu Hamada** - modifications to `g2m/g2m.hpp` and the `g2m/gplayer.*` G-code player (2015) - [GPL-2.0-or-later](src/g2m/g2m.hpp)
-* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in [`rs274ngc/`](src/rs274ngc/) (2008) - [GPL-3.0-or-later](src/rs274ngc/LICENSE)
+* **The LinuxCNC project** - the RS274NGC G-code interpreter vendored in
+  [`src/linuxcnc/`](src/linuxcnc/) (revision `bae3bfbdfb97e9bea4295afc6079e1c74a3e0958`) - [GPL-2.0](src/linuxcnc/LICENSE)
+* **NIST** and **Mark Pictor** - the RS274NGC G-code interpreter vendored in
+  [`src/rs274ngc/`](src/rs274ngc/) (2008) - [GPL-3.0-or-later](src/rs274ngc/LICENSE)
